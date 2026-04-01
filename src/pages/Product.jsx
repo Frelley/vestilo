@@ -8,6 +8,7 @@ export default function Product() {
   const { id } = useParams()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [activePhoto, setActivePhoto] = useState(0)
 
   useEffect(() => {
     supabase.from('products').select('*').eq('id', id).single()
@@ -36,6 +37,11 @@ export default function Product() {
   const st = STATUS_STYLES[product.status] || STATUS_STYLES.Disponible
   const available = product.status === 'Disponible'
 
+  // Support both new photos array and old single photo_url
+  const allPhotos = product.photos?.length
+    ? product.photos
+    : product.photo_url ? [product.photo_url] : []
+
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
       <Header />
@@ -46,10 +52,60 @@ export default function Product() {
         </Link>
 
         <div className="card">
-          {/* Photo */}
-          {product.photo_url ? (
-            <img src={product.photo_url} alt={product.name}
-              style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }} />
+          {/* Photo gallery */}
+          {allPhotos.length > 0 ? (
+            <div>
+              {/* Main photo */}
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={allPhotos[activePhoto]}
+                  alt={product.name}
+                  style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }}
+                />
+                {/* Prev / Next arrows */}
+                {allPhotos.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setActivePhoto(p => (p - 1 + allPhotos.length) % allPhotos.length)}
+                      style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      ‹
+                    </button>
+                    <button
+                      onClick={() => setActivePhoto(p => (p + 1) % allPhotos.length)}
+                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      ›
+                    </button>
+                    {/* Dots */}
+                    <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
+                      {allPhotos.map((_, i) => (
+                        <button key={i} onClick={() => setActivePhoto(i)} style={{
+                          width: i === activePhoto ? 16 : 6, height: 6,
+                          borderRadius: 3, background: i === activePhoto ? '#fff' : 'rgba(255,255,255,0.5)',
+                          border: 'none', cursor: 'pointer', padding: 0,
+                          transition: 'width 0.2s'
+                        }} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Thumbnails */}
+              {allPhotos.length > 1 && (
+                <div style={{ display: 'flex', gap: 6, padding: '10px 12px', overflowX: 'auto' }}>
+                  {allPhotos.map((url, i) => (
+                    <img key={i} src={url} alt="" onClick={() => setActivePhoto(i)}
+                      style={{
+                        width: 52, height: 52, objectFit: 'cover', borderRadius: 6,
+                        cursor: 'pointer', flexShrink: 0,
+                        border: i === activePhoto ? '2px solid #1a1209' : '2px solid transparent',
+                        opacity: i === activePhoto ? 1 : 0.6
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <div style={{ height: 300, background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 90 }}>
               👕
@@ -57,24 +113,20 @@ export default function Product() {
           )}
 
           <div style={{ padding: 20 }}>
-            {/* Category */}
             {product.cat && (
               <div style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
                 {product.cat}
               </div>
             )}
 
-            {/* Name */}
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#1a1209', marginBottom: 8, lineHeight: 1.3 }}>
               {product.name}
             </h1>
 
-            {/* Price */}
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#1a1209', marginBottom: 14 }}>
               Bs. {product.price}
             </div>
 
-            {/* Tags */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
               <span style={{ fontSize: 13, padding: '5px 12px', borderRadius: 99, border: '1px solid #e8e0d4', color: '#1a1209', fontWeight: 500 }}>
                 Talla {product.size}
@@ -92,14 +144,12 @@ export default function Product() {
               ))}
             </div>
 
-            {/* Status */}
             <div style={{ marginBottom: 20 }}>
               <span className="badge" style={{ background: st.bg, color: st.color, fontSize: 12 }}>
                 {product.status}
               </span>
             </div>
 
-            {/* WhatsApp button */}
             {available ? (
               <a
                 href={`https://wa.me/${WA_NUMBER}?text=${waMessage(product)}`}

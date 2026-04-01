@@ -6,6 +6,7 @@ import Header from '../components/Header.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
 
 const EMPTY = { name: '', cat: '', size: '', color: '', price: '', styles: [], notes: '' }
+const MAX_PHOTOS = 4
 
 export default function Upload() {
   const { id } = useParams()
@@ -14,9 +15,8 @@ export default function Upload() {
   const { toast, show } = useToast()
 
   const [form, setForm] = useState(EMPTY)
-  const [photoFile, setPhotoFile] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
-  const [existingPhoto, setExistingPhoto] = useState(null)
+  const [photos, setPhotos] = useState([]) // { file, preview, existing_url }
+  const [activePhoto, setActivePhoto] = useState(0)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(isEdit)
 
@@ -33,19 +33,46 @@ export default function Upload() {
           styles: data.styles || [],
           notes:  data.notes  || '',
         })
-        if (data.photo_url) setExistingPhoto(data.photo_url)
+        // Load existing photos — support both old single photo_url and new photos array
+        const existing = data.photos?.length
+          ? data.photos.map(url => ({ file: null, preview: url, existing_url: url }))
+          : data.photo_url
+            ? [{ file: null, preview: data.photo_url, existing_url: data.photo_url }]
+            : []
+        setPhotos(existing)
       }
       setLoading(false)
     })
   }, [id, isEdit])
 
-  function handlePhoto(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    setPhotoFile(file)
-    const reader = new FileReader()
-    reader.onload = ev => setPhotoPreview(ev.target.result)
-    reader.readAsDataURL(file)
+  function handlePhotoAdd(e) {
+    const files = Array.from(e.target.files)
+    const remaining = MAX_PHOTOS - photos.length
+    if (remaining <= 0) { show(`Máximo ${MAX_PHOTOS} fotos`, 'error'); return }
+    const toAdd = files.slice(0, remaining)
+    toAdd.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = ev => {
+        setPhotos(prev => [...prev, { file, preview: ev.target.result, existing_url: null }])
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ''
+  }
+
+  function removePhoto(idx) {
+    setPhotos(prev => prev.filter((_, i) => i !== idx))
+    setActivePhoto(prev => Math.max(0, prev - (idx <= prev ? 1 : 0)))
+  }
+
+  function movePhoto(from, to) {
+    setPhotos(prev => {
+      const arr = [...prev]
+      const [item] = arr.splice(from, 1)
+      arr.splice(to, 0, item)
+      return arr
+    })
+    setActivePhoto(to)
   }
 
   function toggleStyle(s) {
@@ -60,37 +87,36 @@ export default function Upload() {
       show('Completa todos los campos requeridos', 'error')
       return
     }
-
     setSaving(true)
     try {
-      let photo_url = existingPhoto || null
+      const productId = isEdit ? id : null
+
+      // Upload new photos, keep existing URLs
+      const uploadedUrls = await Promise.all(
+        photos.map(async p => {
+          if (p.existing_url) return p.existing_url
+          return await uploadPhoto(p.file, productId || `temp-${Date.now()}-${Math.random()}`)
+        })
+      )
+
+      const photo_url = uploadedUrls[0] || null
+      const photoData = { photo_url, photos: uploadedUrls }
 
       if (isEdit) {
-        // Update existing
-        const updates = { ...form, price: parseInt(form.price), photo_url }
-        if (photoFile) {
-          photo_url = await uploadPhoto(photoFile, id)
-          updates.photo_url = photo_url
-        }
-        await updateProduct(id, updates)
+        await updateProduct(id, { ...form, price: parseInt(form.price), ...photoData })
         show('Producto actualizado')
       } else {
-        // Create new — insert first to get ID, then upload photo
         const { data: newProduct, error } = await addProduct({
-          ...form,
-          price: parseInt(form.price),
-          status: 'Disponible',
-          photo_url: null,
+          ...form, price: parseInt(form.price), status: 'Disponible', photo_url: null, photos: [],
         })
         if (error) throw error
-
-        if (photoFile) {
-          photo_url = await uploadPhoto(photoFile, newProduct.id)
-          await updateProduct(newProduct.id, { photo_url })
-        }
+        // Re-upload with real ID
+        const finalUrls = await Promise.all(
+          photos.map(p => uploadPhoto(p.file, newProduct.id))
+        )
+        await updateProduct(newProduct.id, { photo_url: finalUrls[0] || null, photos: finalUrls })
         show('Producto guardado')
       }
-
       setTimeout(() => navigate('/admin'), 800)
     } catch (err) {
       console.error(err)
@@ -114,7 +140,7 @@ export default function Upload() {
     </div>
   )
 
-  const photoSrc = photoPreview || existingPhoto
+  const mainPhoto = photos[activePhoto]?.preview || null
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
@@ -134,26 +160,68 @@ export default function Upload() {
           )}
         </div>
 
-        {/* Photo upload */}
+        {/* Photo section */}
         <div className="card" style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', cursor: 'pointer' }}>
-            {photoSrc ? (
-              <img src={photoSrc} alt="preview" style={{ width: '100%', maxHeight: 280, objectFit: 'cover', display: 'block' }} />
-            ) : (
-              <div style={{ height: 180, background: '#f0ede8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <div style={{ fontSize: 36 }}>📸</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: '#9e8a6a' }}>Toca para subir foto</div>
-                <div style={{ fontSize: 12, color: '#c4b9a8' }}>JPG, PNG · máx 5MB</div>
+          {/* Main photo display */}
+          {mainPhoto ? (
+            <img src={mainPhoto} alt="preview"
+              style={{ width: '100%', maxHeight: 300, objectFit: 'cover', display: 'block' }} />
+          ) : (
+            <div style={{ height: 180, background: '#f0ede8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <div style={{ fontSize: 36 }}>📸</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: '#9e8a6a' }}>Agrega fotos del producto</div>
+              <div style={{ fontSize: 12, color: '#c4b9a8' }}>Hasta {MAX_PHOTOS} fotos · JPG, PNG</div>
+            </div>
+          )}
+
+          {/* Thumbnail row */}
+          <div style={{ padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {photos.map((p, i) => (
+              <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
+                <img
+                  src={p.preview}
+                  onClick={() => setActivePhoto(i)}
+                  style={{
+                    width: 56, height: 56, objectFit: 'cover', borderRadius: 6, cursor: 'pointer',
+                    border: i === activePhoto ? '2px solid #1a1209' : '2px solid transparent',
+                    opacity: i === activePhoto ? 1 : 0.7
+                  }}
+                />
+                {/* Remove button */}
+                <button onClick={() => removePhoto(i)} style={{
+                  position: 'absolute', top: -6, right: -6, width: 18, height: 18,
+                  borderRadius: '50%', background: '#c62828', color: '#fff', border: 'none',
+                  fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1
+                }}>✕</button>
+                {/* Move left */}
+                {i > 0 && (
+                  <button onClick={() => movePhoto(i, i - 1)} style={{
+                    position: 'absolute', bottom: -6, left: -6, width: 18, height: 18,
+                    borderRadius: '50%', background: '#1a1209', color: '#f5e6c8', border: 'none',
+                    fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>←</button>
+                )}
               </div>
-            )}
-            <input type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
-          </label>
-          {photoSrc && (
-            <div style={{ padding: '8px 12px', textAlign: 'center' }}>
-              <label style={{ fontSize: 12, color: '#9e8a6a', cursor: 'pointer', textDecoration: 'underline' }}>
-                Cambiar foto
-                <input type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
+            ))}
+
+            {/* Add photo button */}
+            {photos.length < MAX_PHOTOS && (
+              <label style={{
+                width: 56, height: 56, borderRadius: 6, border: '1.5px dashed #c4b9a8',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', background: '#faf8f5', flexShrink: 0, gap: 2
+              }}>
+                <span style={{ fontSize: 18, color: '#9e8a6a' }}>+</span>
+                <span style={{ fontSize: 9, color: '#c4b9a8' }}>{photos.length}/{MAX_PHOTOS}</span>
+                <input type="file" accept="image/*" multiple onChange={handlePhotoAdd} style={{ display: 'none' }} />
               </label>
+            )}
+          </div>
+
+          {photos.length > 0 && (
+            <div style={{ padding: '0 12px 10px', fontSize: 11, color: '#9e8a6a' }}>
+              La primera foto aparece en el catálogo. Usa ← para reordenar.
             </div>
           )}
         </div>
