@@ -4,6 +4,7 @@ import { SIZES, COLOR_DOTS, WA_NUMBER } from '../lib/constants.js'
 
 const SWIPE_THRESHOLD = 75
 const STORAGE_KEY = 'vestilo-liked'
+const STORE_URL = 'https://vestilo.vercel.app'
 
 function getLiked() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] }
@@ -16,6 +17,26 @@ async function recordInteraction(productId, type) {
   try {
     await supabase.rpc('record_swipe', { p_product_id: productId, p_type: type })
   } catch {}
+}
+
+async function nativeShare(product) {
+  const url  = `${STORE_URL}/p/${product.id}`
+  const text = `👕 Mirá esta camiseta: *${product.name}* — Talla ${product.size}, Bs. ${product.price}${product.color ? `, ${product.color}` : ''}`
+  if (navigator.share) {
+    try { await navigator.share({ title: product.name, text, url }); return 'shared' } catch {}
+  }
+  try { await navigator.clipboard.writeText(`${text}\n${url}`); return 'copied' } catch {}
+  return null
+}
+
+// Share icon SVG
+function ShareIcon({ size = 14, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+    </svg>
+  )
 }
 
 export default function Catalogue() {
@@ -34,6 +55,7 @@ export default function Catalogue() {
   const [swipeDir, setSwipeDir] = useState(null)
   const [photoIdx, setPhotoIdx] = useState(0)
   const [flipped, setFlipped] = useState(false)
+  const [shareStatus, setShareStatus] = useState(null) // null | 'copied'
   const dragRef = useRef(drag)
   dragRef.current = drag
 
@@ -93,6 +115,15 @@ export default function Catalogue() {
 
   function restart() {
     setIndex(0); setPhotoIdx(0); setFlipped(false)
+  }
+
+  async function handleShare(product, e) {
+    if (e) e.stopPropagation()
+    const result = await nativeShare(product)
+    if (result === 'copied') {
+      setShareStatus('copied')
+      setTimeout(() => setShareStatus(null), 2200)
+    }
   }
 
   // Drag
@@ -174,15 +205,15 @@ export default function Catalogue() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, padding: '8px 16px 120px' }}>
               {likedProducts.map(p => {
                 const isSelected = selected.includes(p.id)
-                const photos = getPhotos(p)
+                const pPhotos = getPhotos(p)
                 return (
                   <div key={p.id} onClick={() => toggleSelect(p.id)} style={{
                     background: isSelected ? '#2d1f0e' : '#241810',
                     border: `2px solid ${isSelected ? '#f5e6c8' : '#3d3020'}`,
                     borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative'
                   }}>
-                    {photos[0]
-                      ? <img src={photos[0]} alt={p.name} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                    {pPhotos[0]
+                      ? <img src={pPhotos[0]} alt={p.name} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
                       : <div style={{ height: 140, background: '#3d3020', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>👕</div>
                     }
                     {isSelected && (
@@ -192,9 +223,15 @@ export default function Catalogue() {
                       <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#f5e6c8', marginBottom: 2, lineHeight: 1.3 }}>{p.name}</div>
                       <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 4 }}>Talla {p.size}{p.color ? ` · ${p.color}` : ''}</div>
                       <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#f5e6c8' }}>Bs. {p.price}</div>
-                      <button onClick={e => { e.stopPropagation(); removeFromLiked(p.id) }} style={{ marginTop: 6, fontSize: 10, color: '#9e8a6a', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
-                        Quitar
-                      </button>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
+                        <button onClick={e => { e.stopPropagation(); removeFromLiked(p.id) }} style={{ fontSize: 10, color: '#9e8a6a', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                          Quitar
+                        </button>
+                        {/* Share individual item */}
+                        <button onClick={e => handleShare(p, e)} style={{ fontSize: 10, color: '#9e8a6a', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <ShareIcon size={10} color="#9e8a6a" /> Compartir
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )
@@ -324,7 +361,7 @@ export default function Catalogue() {
                 touchAction: 'none',
               }}
             >
-              {/* Photo */}
+              {/* Photo side */}
               {!flipped ? (
                 <>
                   {photos.length > 0
@@ -401,7 +438,26 @@ export default function Catalogue() {
                       ))}
                     </div>
                   )}
-                  <div style={{ marginTop: 'auto', paddingTop: 16, fontSize: 11, color: '#9e8a6a', textAlign: 'center' }}>
+
+                  {/* Share button on flipped card */}
+                  <button
+                    onClick={e => handleShare(current, e)}
+                    style={{
+                      marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                      background: shareStatus === 'copied' ? '#1e3a1e' : '#241810',
+                      border: `1px solid ${shareStatus === 'copied' ? '#4CAF50' : '#3d3020'}`,
+                      borderRadius: 10, padding: '11px 16px', cursor: 'pointer',
+                      color: shareStatus === 'copied' ? '#4CAF50' : '#f5e6c8',
+                      fontSize: 13, fontWeight: 500, transition: 'all 0.2s',
+                    }}
+                  >
+                    {shareStatus === 'copied'
+                      ? <><span>✓</span> Enlace copiado</>
+                      : <><ShareIcon size={14} color="#9e8a6a" /> Compartir esta camiseta</>
+                    }
+                  </button>
+
+                  <div style={{ marginTop: 'auto', paddingTop: 12, fontSize: 11, color: '#9e8a6a', textAlign: 'center' }}>
                     Toca para volver a la foto
                   </div>
                 </div>
@@ -436,4 +492,3 @@ export default function Catalogue() {
     </div>
   )
 }
-
