@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getProducts, supabase } from '../lib/supabase.js'
 import { SIZES, COLOR_DOTS, WA_NUMBER } from '../lib/constants.js'
 
