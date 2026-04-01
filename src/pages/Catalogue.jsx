@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { getProducts, supabase } from '../lib/supabase.js'
 import { SIZES, COLOR_DOTS, WA_NUMBER } from '../lib/constants.js'
 
@@ -311,7 +311,6 @@ export default function Catalogue() {
 
             {/* Current card */}
             <div
-              ref={cardRef}
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd}
               onClick={onTap}
