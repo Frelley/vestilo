@@ -91,7 +91,8 @@ export default function Product() {
                 <img
                   src={allPhotos[activePhoto]}
                   alt={product.name}
-                  style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }}
+                  onClick={() => allPhotos.length > 1 && setActivePhoto(p => (p + 1) % allPhotos.length)}
+                  style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block', cursor: allPhotos.length > 1 ? 'pointer' : 'default' }}
                 />
                 {allPhotos.length > 1 && (
                   <>
