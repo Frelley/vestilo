@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getProducts, supabase } from '../lib/supabase.js'
+import { getProductsSorted, supabase } from '../lib/supabase.js'
 import { SIZES, COLOR_DOTS, WA_NUMBER } from '../lib/constants.js'
 
 const SWIPE_THRESHOLD = 75
@@ -35,7 +35,6 @@ const WA_SVG = (
   </svg>
 )
 
-// ── Mode picker ───────────────────────────────────────────────────────────────
 function ModePicker({ onPick }) {
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -61,7 +60,6 @@ function ModePicker({ onPick }) {
   )
 }
 
-// ── Liked list (shared between modes) ────────────────────────────────────────
 function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
   const [selected, setSelected] = useState([])
   const toggleSelect = id => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -122,7 +120,6 @@ function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
   )
 }
 
-// ── Grid view ─────────────────────────────────────────────────────────────────
 function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked }) {
   const navigate = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
@@ -180,7 +177,6 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Catalogue() {
   const [mode, setMode] = useState(getSavedMode)
   const [products, setProducts] = useState([])
@@ -205,7 +201,7 @@ export default function Catalogue() {
 
   async function load() {
     setLoading(true)
-    const { data } = await getProducts({ status: 'Disponible' })
+    const { data } = await getProductsSorted({ status: 'Disponible' })
     if (data) {
       setProducts(data)
       const max = Math.max(...data.map(p => p.price), 500)
@@ -278,7 +274,6 @@ export default function Catalogue() {
     <GridView products={queue} likedIds={likedIds} onToggleLike={toggleLike} onSwitchMode={switchMode} filterBar={filterBar} likedProducts={likedProducts} onRemoveLiked={removeLiked} />
   )
 
-  // ── Swipe mode ────────────────────────────────────────────────────────────
   const current = queue[index]
   const nextCard = queue[index + 1]
   const photos = getPhotos(current)
