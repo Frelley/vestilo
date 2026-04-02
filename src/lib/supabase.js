@@ -33,6 +33,18 @@ export async function getProducts(filters = {}) {
   return query
 }
 
+export async function addProduct(product) {
+  return supabase.from('products').insert([product]).select().single()
+}
+
+export async function updateProduct(id, updates) {
+  return supabase.from('products').update(updates).eq('id', id).select().single()
+}
+
+export async function deleteProduct(id) {
+  return supabase.from('products').delete().eq('id', id)
+}
+
 // ─── Sorted products (new grace + like ratio) ────────────────────────────────
 // Items < 2 days old float to top (newest first among themselves).
 // Everything else sorted by like ratio (likes / total swipes), nulls last.
@@ -68,18 +80,6 @@ export async function getProductsSorted(filters = {}) {
   return { data: withScore, error: null }
 }
 
-export async function addProduct(product) {
-  return supabase.from('products').insert([product]).select().single()
-}
-
-export async function updateProduct(id, updates) {
-  return supabase.from('products').update(updates).eq('id', id).select().single()
-}
-
-export async function deleteProduct(id) {
-  return supabase.from('products').delete().eq('id', id)
-}
-
 // ─── Auto-label ───────────────────────────────────────────────────────────────
 export async function getNextLabelForSize(size) {
   if (!size) return ''
@@ -89,4 +89,28 @@ export async function getNextLabelForSize(size) {
     .select('name')
     .like('name', `${prefix}%`)
   let max = 0
-  ;(data || []).forEach(({ name
+  ;(data || []).forEach(({ name }) => {
+    const num = parseInt(name.replace(prefix, ''), 10)
+    if (!isNaN(num) && num > max) max = num
+  })
+  const next = String(max + 1).padStart(3, '0')
+  return `${prefix}${next}`
+}
+
+// ─── Photo upload ─────────────────────────────────────────────────────────────
+export async function uploadPhoto(file, productId) {
+  const ext = file.name.split('.').pop()
+  const path = `products/${productId}-${Date.now()}.${ext}`
+
+  const { error } = await supabase.storage
+    .from('product-photos')
+    .upload(path, file, { upsert: true })
+
+  if (error) throw error
+
+  const { data } = supabase.storage
+    .from('product-photos')
+    .getPublicUrl(path)
+
+  return data.publicUrl
+}
