@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getProductsSorted, supabase } from '../lib/supabase.js'
-import { SIZES, COLOR_DOTS, WA_NUMBER } from '../lib/constants.js'
+import { SIZES, COLOR_DOTS, WA_NUMBER, colorsArray } from '../lib/constants.js'
 
 const SWIPE_THRESHOLD = 75
 const STORAGE_KEY = 'vestilo-liked'
@@ -35,6 +35,7 @@ const WA_SVG = (
   </svg>
 )
 
+// ── Mode picker ───────────────────────────────────────────────────────────────
 function ModePicker({ onPick }) {
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -60,6 +61,7 @@ function ModePicker({ onPick }) {
   )
 }
 
+// ── Liked list ────────────────────────────────────────────────────────────────
 function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
   const [selected, setSelected] = useState([])
   const toggleSelect = id => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -90,6 +92,7 @@ function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
             {likedProducts.map(p => {
               const isSel = selected.includes(p.id)
               const ph = getPhotos(p)
+              const colors = colorsArray(p.color)
               return (
                 <div key={p.id} onClick={() => toggleSelect(p.id)} style={{ background: isSel ? '#2d1f0e' : '#241810', border: `2px solid ${isSel ? '#f5e6c8' : '#3d3020'}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
                   {ph[0] ? <img src={ph[0]} alt={p.name} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
@@ -97,7 +100,11 @@ function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
                   {isSel && <div style={{ position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: '50%', background: '#f5e6c8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✓</div>}
                   <div style={{ padding: '8px 10px 10px' }}>
                     <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#f5e6c8', marginBottom: 2, lineHeight: 1.3 }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 4 }}>Talla {p.size}{p.color ? ` · ${p.color}` : ''}</div>
+                    <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      Talla {p.size}
+                      {colors.map(c => <span key={c} style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block', flexShrink: 0 }} />)}
+                      {colors.length > 0 && <span>{colors.join(', ')}</span>}
+                    </div>
                     <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#f5e6c8' }}>Bs. {p.price}</div>
                     <button onClick={e => { e.stopPropagation(); onRemove(p.id); setSelected(s => s.filter(x => x !== p.id)) }}
                       style={{ marginTop: 6, fontSize: 10, color: '#9e8a6a', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>Quitar</button>
@@ -120,6 +127,7 @@ function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
   )
 }
 
+// ── Grid view ─────────────────────────────────────────────────────────────────
 function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked }) {
   const navigate = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
@@ -144,6 +152,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
         {products.map(p => {
           const ph = getPhotos(p)
           const isLiked = likedIds.includes(p.id)
+          const colors = colorsArray(p.color)
           return (
             <div key={p.id} onClick={() => navigate(`/p/${p.id}`)} style={{ background: '#241810', border: '1px solid #3d3020', borderRadius: 14, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
               <div style={{ position: 'relative' }}>
@@ -157,9 +166,15 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
               </div>
               <div style={{ padding: '10px 10px 12px' }}>
                 <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#f5e6c8', marginBottom: 3, lineHeight: 1.3 }}>{p.name}</div>
-                <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                   <span>Talla {p.size}</span>
-                  {p.color && <><span style={{ color: '#3d3020' }}>·</span><span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOTS[p.color] || '#ccc', display: 'inline-block', flexShrink: 0 }} /><span>{p.color}</span></>}
+                  {colors.map(c => (
+                    <span key={c} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <span style={{ color: '#3d3020' }}>·</span>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block', flexShrink: 0 }} />
+                      <span>{c}</span>
+                    </span>
+                  ))}
                 </div>
                 <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {p.price}</div>
               </div>
@@ -177,6 +192,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
   )
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Catalogue() {
   const [mode, setMode] = useState(getSavedMode)
   const [products, setProducts] = useState([])
@@ -274,6 +290,7 @@ export default function Catalogue() {
     <GridView products={queue} likedIds={likedIds} onToggleLike={toggleLike} onSwitchMode={switchMode} filterBar={filterBar} likedProducts={likedProducts} onRemoveLiked={removeLiked} />
   )
 
+  // ── Swipe mode ────────────────────────────────────────────────────────────
   const current = queue[index]
   const nextCard = queue[index + 1]
   const photos = getPhotos(current)
@@ -321,6 +338,8 @@ export default function Catalogue() {
   const skipOp = Math.min(Math.max(-dx / SWIPE_THRESHOLD, 0), 1)
 
   if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={removeLiked} emptyMsg="Desliza a la derecha las camisetas que te gusten" />
+
+  const currentColors = colorsArray(current?.color)
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', userSelect: 'none' }}>
@@ -401,7 +420,14 @@ export default function Catalogue() {
                     <div style={{ fontFamily: "'Playfair Display', serif", color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Talla {current.size}</span>
-                      {current.color && <><span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span><span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[current.color] || '#ccc', display: 'inline-block' }} />{current.color}</span></>}
+                      {currentColors.map(c => (
+                        <span key={c} style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                      ))}
+                      {currentColors.map(c => (
+                        <span key={c} style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block' }} />{c}
+                        </span>
+                      ))}
                       <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
                       <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {current.price}</span>
                     </div>
@@ -410,13 +436,15 @@ export default function Catalogue() {
                 </>
               ) : (
                 <div style={{ height: '100%', background: '#1a1209', padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6 }}>{current.cat}</div>
                   <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 20, fontWeight: 700, marginBottom: 8, lineHeight: 1.3 }}>{current.name}</div>
                   <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 24, fontWeight: 700, marginBottom: 16 }}>Bs. {current.price}</div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
                     <span style={{ fontSize: 12, padding: '5px 10px', borderRadius: 99, border: '1px solid #3d3020', color: '#f5e6c8' }}>Talla {current.size}</span>
-                    {current.color && <span style={{ fontSize: 12, padding: '5px 10px', borderRadius: 99, border: '1px solid #3d3020', color: '#f5e6c8', display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[current.color] || '#ccc' }} />{current.color}</span>}
-                    {(current.styles || []).map(s => <span key={s} style={{ fontSize: 12, padding: '5px 10px', borderRadius: 99, border: '1px solid #3d3020', color: '#9e8a6a' }}>{s}</span>)}
+                    {currentColors.map(c => (
+                      <span key={c} style={{ fontSize: 12, padding: '5px 10px', borderRadius: 99, border: '1px solid #3d3020', color: '#f5e6c8', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc' }} />{c}
+                      </span>
+                    ))}
                   </div>
                   {photos.length > 1 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{photos.map((url, i) => <img key={i} src={url} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid #3d3020', opacity: 0.9 }} />)}</div>}
                   <div style={{ marginTop: 'auto', paddingTop: 16, fontSize: 11, color: '#9e8a6a', textAlign: 'center' }}>Toca para volver a la foto</div>
