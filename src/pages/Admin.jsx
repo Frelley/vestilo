@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getProducts, updateProduct, deleteProduct, supabase } from '../lib/supabase.js'
-import { STATUS_STYLES, daysSince, formatDate } from '../lib/constants.js'
+import { STATUS_STYLES, daysSince, formatDate, colorsArray } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import ProductCard from '../components/ProductCard.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
@@ -56,7 +56,7 @@ export default function Admin() {
 
   const filtered = products.filter(p => {
     const q = search.toLowerCase()
-    if (q && !`${p.name} ${p.color} ${p.size} ${p.cat}`.toLowerCase().includes(q)) return false
+    if (q && !`${p.name} ${colorsArray(p.color).join(' ')} ${p.size} ${p.cat}`.toLowerCase().includes(q)) return false
     if (filterStatus && p.status !== filterStatus) return false
     if (activeTab === 'old' && !(p.status === 'Disponible' && daysSince(p.created_at) > 30)) return false
     if (activeTab === 'sold' && p.status !== 'Vendido') return false
@@ -164,7 +164,7 @@ export default function Admin() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 8, overflow: 'hidden', border: '1px solid #e8e0d4' }}>
             <thead>
               <tr style={{ background: '#1a1209', color: '#f5e6c8' }}>
-                {['Producto','Talla','Precio','Ingreso','Días','Estado','♥ Likes','✕ Skips','Acciones'].map(h => (
+                {['Producto','Talla','Color','Precio','Ingreso','Días','Estado','♥ Likes','✕ Skips','Acciones'].map(h => (
                   <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, letterSpacing: 0.5, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -189,6 +189,7 @@ export default function Admin() {
                       </div>
                     </td>
                     <td style={{ padding: '9px 12px', color: '#9e8a6a' }}>{p.size}</td>
+                    <td style={{ padding: '9px 12px', color: '#9e8a6a' }}>{colorsArray(p.color).join(', ')}</td>
                     <td style={{ padding: '9px 12px', fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Bs. {p.price}</td>
                     <td style={{ padding: '9px 12px', color: '#9e8a6a', whiteSpace: 'nowrap' }}>{formatDate(p.created_at)}</td>
                     <td style={{ padding: '9px 12px' }}>
