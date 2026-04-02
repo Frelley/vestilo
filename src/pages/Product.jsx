@@ -132,7 +132,7 @@ export default function Product() {
 
          {available ? (
               
-                  href={`https://wa.me/${WA_NUMBER}?text=${waMessage(product)}`}
+                  <a href={`https://wa.me/${WA_NUMBER}?text=${waMessage(product)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-wa btn"
