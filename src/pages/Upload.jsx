@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase, addProduct, updateProduct, uploadPhoto, deleteProduct, getNextLabelForSize } from '../lib/supabase.js'
-import { SIZES, COLORS, CATS, STYLES, COLOR_DOTS } from '../lib/constants.js'
+import { SIZES, COLORS, COLOR_DOTS } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
 
-const EMPTY = { name: '', cat: '', size: '', color: '', price: '', styles: [], notes: '' }
+const EMPTY = { name: '', size: '', colors: [], price: '', notes: '' }
 const MAX_PHOTOS = 4
 
 export default function Upload() {
@@ -26,11 +26,9 @@ export default function Upload() {
       if (data) {
         setForm({
           name:   data.name   || '',
-          cat:    data.cat    || '',
           size:   data.size   || '',
-          color:  data.color  || '',
+          colors: Array.isArray(data.color) ? data.color : data.color ? [data.color] : [],
           price:  data.price  || '',
-          styles: data.styles || [],
           notes:  data.notes  || '',
         })
         const existing = data.photos?.length
@@ -89,15 +87,15 @@ export default function Upload() {
     setForm(f => ({ ...f, price: rounded }))
   }
 
-  function toggleStyle(s) {
+  function toggleColor(c) {
     setForm(f => ({
       ...f,
-      styles: f.styles.includes(s) ? f.styles.filter(x => x !== s) : [...f.styles, s]
+      colors: f.colors.includes(c) ? f.colors.filter(x => x !== c) : [...f.colors, c]
     }))
   }
 
   async function handleSave() {
-    if (!form.name || !form.size || !form.color || !form.price || !form.cat) {
+    if (!form.name || !form.size || !form.colors.length || !form.price) {
       show('Completa todos los campos requeridos', 'error')
       return
     }
@@ -114,13 +112,15 @@ export default function Upload() {
 
       const photo_url = uploadedUrls[0] || null
       const photoData = { photo_url, photos: uploadedUrls }
+      const colorData = { color: form.colors }
 
       if (isEdit) {
-        await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData })
+        await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData, ...colorData })
         show('Producto actualizado')
       } else {
         const { data: newProduct, error } = await addProduct({
-          ...form, price: parseFloat(form.price), status: 'Disponible', photo_url: null, photos: [],
+          ...form, price: parseFloat(form.price), status: 'Disponible',
+          photo_url: null, photos: [], color: form.colors,
         })
         if (error) throw error
         const finalUrls = await Promise.all(
@@ -257,13 +257,6 @@ export default function Upload() {
               <input placeholder="Ej: M-001" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div>
-              <label style={lblStyle}>Categoría *</label>
-              <select value={form.cat} onChange={e => setForm(f => ({ ...f, cat: e.target.value }))}>
-                <option value="">Seleccionar...</option>
-                {CATS.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
               <label style={lblStyle}>Notas internas</label>
               <textarea placeholder="Notas sobre el producto (solo visible para el equipo)..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ resize: 'vertical' }} />
             </div>
@@ -271,33 +264,17 @@ export default function Upload() {
         </div>
 
         {/* Color */}
-        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
-          <label style={lblStyle}>Color *</label>
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <label style={lblStyle}>Color * <span style={{ textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', color: '#c4b9a8' }}>(selecciona todos los que apliquen)</span></label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {COLORS.map(c => (
-              <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
+              <button key={c} type="button" onClick={() => toggleColor(c)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 99,
-                  border: form.color === c ? '2px solid #1a1209' : '1px solid #e8e0d4',
-                  background: form.color === c ? '#1a1209' : 'transparent',
-                  color: form.color === c ? '#f5e6c8' : '#9e8a6a', fontSize: 12, cursor: 'pointer' }}>
+                  border: form.colors.includes(c) ? '2px solid #1a1209' : '1px solid #e8e0d4',
+                  background: form.colors.includes(c) ? '#1a1209' : 'transparent',
+                  color: form.colors.includes(c) ? '#f5e6c8' : '#9e8a6a', fontSize: 12, cursor: 'pointer' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
                 {c}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Styles */}
-        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <label style={lblStyle}>Estilo (selecciona todos los que apliquen)</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {STYLES.map(s => (
-              <button key={s} type="button" onClick={() => toggleStyle(s)}
-                style={{ padding: '6px 12px', borderRadius: 99, fontSize: 12, cursor: 'pointer',
-                  border: form.styles.includes(s) ? '2px solid #1a1209' : '1px solid #e8e0d4',
-                  background: form.styles.includes(s) ? '#1a1209' : 'transparent',
-                  color: form.styles.includes(s) ? '#f5e6c8' : '#9e8a6a' }}>
-                {s}
               </button>
             ))}
           </div>
