@@ -5,7 +5,7 @@ import { SIZES, COLORS, COLOR_DOTS } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
 
-const EMPTY = { name: '', size: '', colors: [], price: '', notes: '' }
+const EMPTY = { name: '', size: '', color: [], price: '', notes: '' }
 const MAX_PHOTOS = 4
 
 export default function Upload() {
@@ -27,7 +27,7 @@ export default function Upload() {
         setForm({
           name:   data.name   || '',
           size:   data.size   || '',
-          colors: Array.isArray(data.color) ? data.color : data.color ? [data.color] : [],
+          color:  Array.isArray(data.color) ? data.color : data.color ? [data.color] : [],
           price:  data.price  || '',
           notes:  data.notes  || '',
         })
@@ -90,12 +90,12 @@ export default function Upload() {
   function toggleColor(c) {
     setForm(f => ({
       ...f,
-      colors: f.colors.includes(c) ? f.colors.filter(x => x !== c) : [...f.colors, c]
+      color: f.color.includes(c) ? f.color.filter(x => x !== c) : [...f.color, c]
     }))
   }
 
   async function handleSave() {
-    if (!form.name || !form.size || !form.colors.length || !form.price) {
+    if (!form.name || !form.size || !form.color.length || !form.price) {
       show('Completa todos los campos requeridos', 'error')
       return
     }
@@ -112,15 +112,13 @@ export default function Upload() {
 
       const photo_url = uploadedUrls[0] || null
       const photoData = { photo_url, photos: uploadedUrls }
-      const colorData = { color: form.colors }
 
       if (isEdit) {
-        await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData, ...colorData })
+        await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData })
         show('Producto actualizado')
       } else {
         const { data: newProduct, error } = await addProduct({
-          ...form, price: parseFloat(form.price), status: 'Disponible',
-          photo_url: null, photos: [], color: form.colors,
+          ...form, price: parseFloat(form.price), status: 'Disponible', photo_url: null, photos: [],
         })
         if (error) throw error
         const finalUrls = await Promise.all(
@@ -265,14 +263,14 @@ export default function Upload() {
 
         {/* Color */}
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <label style={lblStyle}>Color * <span style={{ textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', color: '#c4b9a8' }}>(selecciona todos los que apliquen)</span></label>
+          <label style={lblStyle}>Color * {form.color.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}>— {form.color.join(', ')}</span>}</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {COLORS.map(c => (
               <button key={c} type="button" onClick={() => toggleColor(c)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 99,
-                  border: form.colors.includes(c) ? '2px solid #1a1209' : '1px solid #e8e0d4',
-                  background: form.colors.includes(c) ? '#1a1209' : 'transparent',
-                  color: form.colors.includes(c) ? '#f5e6c8' : '#9e8a6a', fontSize: 12, cursor: 'pointer' }}>
+                  border: form.color.includes(c) ? '2px solid #1a1209' : '1px solid #e8e0d4',
+                  background: form.color.includes(c) ? '#1a1209' : 'transparent',
+                  color: form.color.includes(c) ? '#f5e6c8' : '#9e8a6a', fontSize: 12, cursor: 'pointer' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
                 {c}
               </button>
