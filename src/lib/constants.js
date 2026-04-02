@@ -28,8 +28,19 @@ export function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+// helpers for multi-color
+export function colorsArray(color) {
+  if (!color) return []
+  return Array.isArray(color) ? color : [color]
+}
+
+export function colorsLabel(color) {
+  return colorsArray(color).join(', ')
+}
+
 export function waMessage(product) {
+  const colorStr = product.color ? `, color ${colorsLabel(product.color)}` : ''
   return encodeURIComponent(
-    `Hola! Me interesa la camiseta *"${product.name}"* (Bs. ${product.price}, talla ${product.size}${product.color ? ', color ' + product.color : ''}). ¿Está disponible?`
+    `Hola! Me interesa la camiseta *"${product.name}"* (Bs. ${product.price}, talla ${product.size}${colorStr}). ¿Está disponible?`
   )
 }
