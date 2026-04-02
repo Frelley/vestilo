@@ -148,10 +148,11 @@ export default function Admin() {
             return (
               <div key={p.id} style={{ position: 'relative' }}>
                 <ProductCard product={p} admin onStatusChange={handleStatusChange} />
-                {s && (s.likes > 0 || s.skips > 0) && (
+                {s && (s.likes > 0 || s.skips > 0 || s.wa_requests > 0) && (
                   <div style={{ display: 'flex', gap: 6, padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', fontSize: 11 }}>
                     <span style={{ color: '#2e7d32' }}>♥ {s.likes || 0}</span>
                     <span style={{ color: '#9e8a6a' }}>✕ {s.skips || 0}</span>
+                    {s.wa_requests > 0 && <span style={{ color: '#1565c0' }}>💬 {s.wa_requests}</span>}
                     {s.likes > 0 && <span style={{ color: '#9e8a6a', marginLeft: 'auto' }}>{Math.round((s.likes / ((s.likes || 0) + (s.skips || 0))) * 100)}%</span>}
                   </div>
                 )}
@@ -164,7 +165,7 @@ export default function Admin() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 8, overflow: 'hidden', border: '1px solid #e8e0d4' }}>
             <thead>
               <tr style={{ background: '#1a1209', color: '#f5e6c8' }}>
-                {['Producto','Talla','Color','Precio','Ingreso','Días','Estado','♥ Likes','✕ Skips','Acciones'].map(h => (
+                {['Producto','Talla','Color','Precio','Ingreso','Días','Estado','♥ Likes','✕ Skips','💬 WA','Acciones'].map(h => (
                   <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, letterSpacing: 0.5, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -203,6 +204,7 @@ export default function Admin() {
                     </td>
                     <td style={{ padding: '9px 12px', color: '#2e7d32', fontWeight: 600 }}>{sw?.likes || 0}</td>
                     <td style={{ padding: '9px 12px', color: '#9e8a6a' }}>{sw?.skips || 0}</td>
+                    <td style={{ padding: '9px 12px', color: '#1565c0', fontWeight: sw?.wa_requests > 0 ? 600 : 400 }}>{sw?.wa_requests || 0}</td>
                     <td style={{ padding: '9px 12px' }}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {p.status !== 'Disponible' && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#2e7d32' }} onClick={() => handleStatusChange(p.id, 'Disponible')}>Disponible</button>}
