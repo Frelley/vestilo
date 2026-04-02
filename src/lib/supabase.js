@@ -46,8 +46,6 @@ export async function deleteProduct(id) {
 }
 
 // ─── Sorted products (new grace + like ratio) ────────────────────────────────
-// Items < 2 days old float to top (newest first among themselves).
-// Everything else sorted by like ratio (likes / total swipes), nulls last.
 export async function getProductsSorted(filters = {}) {
   const [productsRes, statsRes] = await Promise.all([
     getProducts(filters),
