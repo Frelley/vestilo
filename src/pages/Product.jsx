@@ -4,46 +4,16 @@ import { supabase } from '../lib/supabase.js'
 import { WA_NUMBER, COLOR_DOTS, STATUS_STYLES, waMessage } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 
-const STORE_URL = 'https://vestilo.vercel.app'
-
-async function shareProduct(product) {
-  const url  = `${STORE_URL}/p/${product.id}`
-  const text = `👕 Mirá esta camiseta: *${product.name}* — Talla ${product.size}, Bs. ${product.price}${product.color ? `, ${product.color}` : ''}`
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: product.name, text, url })
-      return 'shared'
-    } catch {}
-  }
-  // Fallback: copy link
-  try {
-    await navigator.clipboard.writeText(`${text}\n${url}`)
-    return 'copied'
-  } catch {}
-  return null
-}
-
 export default function Product() {
   const { id } = useParams()
-  const [product, setProduct]     = useState(null)
-  const [loading, setLoading]     = useState(true)
+  const [product, setProduct] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [activePhoto, setActivePhoto] = useState(0)
-  const [shareStatus, setShareStatus] = useState(null) // null | 'copied'
 
   useEffect(() => {
     supabase.from('products').select('*').eq('id', id).single()
       .then(({ data }) => { setProduct(data); setLoading(false) })
   }, [id])
-
-  async function handleShare() {
-    if (!product) return
-    const result = await shareProduct(product)
-    if (result === 'copied') {
-      setShareStatus('copied')
-      setTimeout(() => setShareStatus(null), 2200)
-    }
-  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh' }}>
@@ -67,6 +37,7 @@ export default function Product() {
   const st = STATUS_STYLES[product.status] || STATUS_STYLES.Disponible
   const available = product.status === 'Disponible'
 
+  // Support both new photos array and old single photo_url
   const allPhotos = product.photos?.length
     ? product.photos
     : product.photo_url ? [product.photo_url] : []
@@ -76,50 +47,22 @@ export default function Product() {
       <Header />
 
       <div style={{ maxWidth: 480, margin: '0 auto', padding: 16 }}>
-
-        {/* Top nav row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <Link to="/" style={{ fontSize: 13, color: '#9e8a6a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            ← Volver al catálogo
-          </Link>
-
-          {/* Share button */}
-          <button
-            onClick={handleShare}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: shareStatus === 'copied' ? '#e8f5e9' : '#fff',
-              border: `1px solid ${shareStatus === 'copied' ? '#a5d6a7' : '#e8e0d4'}`,
-              borderRadius: 8, padding: '6px 12px', cursor: 'pointer',
-              fontSize: 12, fontWeight: 500,
-              color: shareStatus === 'copied' ? '#2e7d32' : '#1a1209',
-              transition: 'all 0.2s',
-            }}
-          >
-            {shareStatus === 'copied' ? (
-              <>✓ Enlace copiado</>
-            ) : (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-                Compartir
-              </>
-            )}
-          </button>
-        </div>
+        <Link to="/" style={{ fontSize: 13, color: '#9e8a6a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 14 }}>
+          ← Volver al catálogo
+        </Link>
 
         <div className="card">
           {/* Photo gallery */}
           {allPhotos.length > 0 ? (
             <div>
+              {/* Main photo */}
               <div style={{ position: 'relative' }}>
                 <img
                   src={allPhotos[activePhoto]}
                   alt={product.name}
                   style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }}
                 />
+                {/* Prev / Next arrows */}
                 {allPhotos.length > 1 && (
                   <>
                     <button
@@ -132,12 +75,14 @@ export default function Product() {
                       style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       ›
                     </button>
+                    {/* Dots */}
                     <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
                       {allPhotos.map((_, i) => (
                         <button key={i} onClick={() => setActivePhoto(i)} style={{
                           width: i === activePhoto ? 16 : 6, height: 6,
                           borderRadius: 3, background: i === activePhoto ? '#fff' : 'rgba(255,255,255,0.5)',
-                          border: 'none', cursor: 'pointer', padding: 0, transition: 'width 0.2s'
+                          border: 'none', cursor: 'pointer', padding: 0,
+                          transition: 'width 0.2s'
                         }} />
                       ))}
                     </div>
@@ -145,6 +90,7 @@ export default function Product() {
                 )}
               </div>
 
+              {/* Thumbnails */}
               {allPhotos.length > 1 && (
                 <div style={{ display: 'flex', gap: 6, padding: '10px 12px', overflowX: 'auto' }}>
                   {allPhotos.map((url, i) => (

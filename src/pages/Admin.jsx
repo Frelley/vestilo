@@ -5,7 +5,6 @@ import { STATUS_STYLES, daysSince, formatDate } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import ProductCard from '../components/ProductCard.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
-import { ShareModal, useShareModal } from '../components/ShareModal.jsx'
 
 export default function Admin() {
   const [products, setProducts] = useState([])
@@ -16,7 +15,6 @@ export default function Admin() {
   const [view, setView] = useState('grid')
   const [activeTab, setActiveTab] = useState('all')
   const { toast, show } = useToast()
-  const { shareProduct, open: openShare, close: closeShare } = useShareModal()
 
   useEffect(() => { load() }, [])
 
@@ -88,7 +86,6 @@ export default function Admin() {
     <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
       <Header admin />
       <Toast toast={toast} />
-      <ShareModal product={shareProduct} onClose={closeShare} />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, padding: '12px 16px' }}>
@@ -150,7 +147,7 @@ export default function Admin() {
             const s = swipeStats[p.id]
             return (
               <div key={p.id} style={{ position: 'relative' }}>
-                <ProductCard product={p} admin onStatusChange={handleStatusChange} onShare={openShare} />
+                <ProductCard product={p} admin onStatusChange={handleStatusChange} />
                 {s && (s.likes > 0 || s.skips > 0) && (
                   <div style={{ display: 'flex', gap: 6, padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', fontSize: 11 }}>
                     <span style={{ color: '#2e7d32' }}>♥ {s.likes || 0}</span>
@@ -207,8 +204,6 @@ export default function Admin() {
                     <td style={{ padding: '9px 12px', color: '#9e8a6a' }}>{sw?.skips || 0}</td>
                     <td style={{ padding: '9px 12px' }}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {/* Share button in table view */}
-                        <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#25D366' }} onClick={() => openShare(p)}>📤</button>
                         {p.status !== 'Disponible' && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#2e7d32' }} onClick={() => handleStatusChange(p.id, 'Disponible')}>Disponible</button>}
                         {p.status !== 'Vendido'    && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828' }} onClick={() => handleStatusChange(p.id, 'Vendido')}>Vendido</button>}
                         {p.status !== 'Reservado'  && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#e65100' }} onClick={() => handleStatusChange(p.id, 'Reservado')}>Reservar</button>}

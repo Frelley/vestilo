@@ -1,6 +1,6 @@
 export const WA_NUMBER = import.meta.env.VITE_WA_NUMBER || '59170000000'
 
-export const SIZES   = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+export const SIZES   = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 export const COLORS  = ['Negro', 'Blanco', 'Gris', 'Azul', 'Rojo', 'Verde', 'Café', 'Amarillo', 'Rosa', 'Morado', 'Naranja', 'Multicolor']
 export const STYLES  = ['Oversize', 'Slim fit', 'Crop', 'Manga larga', 'Bordado', 'Estampado', 'Tie-dye', 'Básica', 'Vintage']
 export const CATS    = ['Básica', 'Diseño', 'Premium', 'Vintage', 'Deportiva', 'Edición limitada']

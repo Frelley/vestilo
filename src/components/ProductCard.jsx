@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { STATUS_STYLES, COLOR_DOTS, daysSince } from '../lib/constants.js'
 
-export default function ProductCard({ product, admin = false, onStatusChange, onShare }) {
+export default function ProductCard({ product, admin = false, onStatusChange }) {
   const days = daysSince(product.created_at)
   const ageDotColor = days > 60 ? '#c62828' : days > 30 ? '#e65100' : '#2e7d32'
   const st = STATUS_STYLES[product.status] || STATUS_STYLES.Disponible
@@ -38,25 +38,6 @@ export default function ProductCard({ product, admin = false, onStatusChange, on
           }}>
             {product.name}
           </Link>
-
-          {/* Share button — admin only */}
-          {admin && onShare && (
-            <button
-              onClick={() => onShare(product)}
-              title="Compartir por WhatsApp"
-              style={{
-                flexShrink: 0, width: 28, height: 28, borderRadius: 6,
-                border: '1px solid #e8e0d4', background: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, cursor: 'pointer', color: '#25D366',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
-              onMouseLeave={e => e.currentTarget.style.background = '#fff'}
-            >
-              📤
-            </button>
-          )}
         </div>
 
         <div style={{ fontSize: 12, color: '#9e8a6a', display: 'flex', alignItems: 'center', gap: 5 }}>

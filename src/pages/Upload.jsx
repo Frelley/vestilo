@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { supabase, addProduct, updateProduct, uploadPhoto, deleteProduct } from '../lib/supabase.js'
+import { supabase, addProduct, updateProduct, uploadPhoto, deleteProduct, getNextLabelForSize } from '../lib/supabase.js'
 import { SIZES, COLORS, CATS, STYLES, COLOR_DOTS } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
@@ -75,6 +75,21 @@ export default function Upload() {
     setActivePhoto(to)
   }
 
+  async function handleSizeChange(size) {
+    setForm(f => ({ ...f, size }))
+    if (!isEdit && size) {
+      const label = await getNextLabelForSize(size)
+      setForm(f => ({ ...f, size, name: label }))
+    }
+  }
+
+  function handlePriceBlur() {
+    const raw = parseFloat(form.price)
+    if (isNaN(raw) || raw <= 0) return
+    const rounded = Math.ceil(raw) - 0.01
+    setForm(f => ({ ...f, price: rounded }))
+  }
+
   function toggleStyle(s) {
     setForm(f => ({
       ...f,
@@ -103,11 +118,11 @@ export default function Upload() {
       const photoData = { photo_url, photos: uploadedUrls }
 
       if (isEdit) {
-        await updateProduct(id, { ...form, price: parseInt(form.price), ...photoData })
+        await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData })
         show('Producto actualizado')
       } else {
         const { data: newProduct, error } = await addProduct({
-          ...form, price: parseInt(form.price), status: 'Disponible', photo_url: null, photos: [],
+          ...form, price: parseFloat(form.price), status: 'Disponible', photo_url: null, photos: [],
         })
         if (error) throw error
         // Re-upload with real ID
@@ -230,17 +245,20 @@ export default function Upload() {
         <div className="card" style={{ padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={lblStyle}>Nombre / descripción *</label>
-              <input placeholder="Ej: Camiseta gráfica astronauta" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <label style={lblStyle}>
+                Nombre / descripción *
+                {!isEdit && form.size && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado al elegir talla</span>}
+              </label>
+              <input placeholder="Ej: M-001" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <label style={lblStyle}>Precio (Bs.) *</label>
-                <input type="number" placeholder="120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
+                <input type="number" placeholder="120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} onBlur={handlePriceBlur} />
               </div>
               <div>
                 <label style={lblStyle}>Talla *</label>
-                <select value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))}>
+                <select value={form.size} onChange={e => handleSizeChange(e.target.value)}>
                   <option value="">Seleccionar...</option>
                   {SIZES.map(s => <option key={s}>{s}</option>)}
                 </select>
