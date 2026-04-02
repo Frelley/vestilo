@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
-import { WA_NUMBER, COLOR_DOTS, STATUS_STYLES, waMessage } from '../lib/constants.js'
+import { WA_NUMBER, COLOR_DOTS, STATUS_STYLES, waMessage, colorsArray } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 
 export default function Product() {
@@ -36,11 +36,8 @@ export default function Product() {
 
   const st = STATUS_STYLES[product.status] || STATUS_STYLES.Disponible
   const available = product.status === 'Disponible'
-
-  // Support both new photos array and old single photo_url
-  const allPhotos = product.photos?.length
-    ? product.photos
-    : product.photo_url ? [product.photo_url] : []
+  const allPhotos = product.photos?.length ? product.photos : product.photo_url ? [product.photo_url] : []
+  const colors = colorsArray(product.color)
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
@@ -52,17 +49,14 @@ export default function Product() {
         </Link>
 
         <div className="card">
-          {/* Photo gallery */}
           {allPhotos.length > 0 ? (
             <div>
-              {/* Main photo */}
               <div style={{ position: 'relative' }}>
                 <img
                   src={allPhotos[activePhoto]}
                   alt={product.name}
                   style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }}
                 />
-                {/* Prev / Next arrows */}
                 {allPhotos.length > 1 && (
                   <>
                     <button
@@ -75,14 +69,12 @@ export default function Product() {
                       style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       ›
                     </button>
-                    {/* Dots */}
                     <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
                       {allPhotos.map((_, i) => (
                         <button key={i} onClick={() => setActivePhoto(i)} style={{
                           width: i === activePhoto ? 16 : 6, height: 6,
                           borderRadius: 3, background: i === activePhoto ? '#fff' : 'rgba(255,255,255,0.5)',
-                          border: 'none', cursor: 'pointer', padding: 0,
-                          transition: 'width 0.2s'
+                          border: 'none', cursor: 'pointer', padding: 0, transition: 'width 0.2s'
                         }} />
                       ))}
                     </div>
@@ -90,7 +82,6 @@ export default function Product() {
                 )}
               </div>
 
-              {/* Thumbnails */}
               {allPhotos.length > 1 && (
                 <div style={{ display: 'flex', gap: 6, padding: '10px 12px', overflowX: 'auto' }}>
                   {allPhotos.map((url, i) => (
@@ -113,12 +104,6 @@ export default function Product() {
           )}
 
           <div style={{ padding: 20 }}>
-            {product.cat && (
-              <div style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
-                {product.cat}
-              </div>
-            )}
-
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#1a1209', marginBottom: 8, lineHeight: 1.3 }}>
               {product.name}
             </h1>
@@ -131,15 +116,10 @@ export default function Product() {
               <span style={{ fontSize: 13, padding: '5px 12px', borderRadius: 99, border: '1px solid #e8e0d4', color: '#1a1209', fontWeight: 500 }}>
                 Talla {product.size}
               </span>
-              {product.color && (
-                <span style={{ fontSize: 13, padding: '5px 12px', borderRadius: 99, border: '1px solid #e8e0d4', color: '#1a1209', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLOR_DOTS[product.color] || '#ccc', border: '1px solid rgba(0,0,0,0.1)' }} />
-                  {product.color}
-                </span>
-              )}
-              {(product.styles || []).map(s => (
-                <span key={s} style={{ fontSize: 13, padding: '5px 12px', borderRadius: 99, border: '1px solid #e8e0d4', color: '#9e8a6a' }}>
-                  {s}
+              {colors.map(c => (
+                <span key={c} style={{ fontSize: 13, padding: '5px 12px', borderRadius: 99, border: '1px solid #e8e0d4', color: '#1a1209', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', border: '1px solid rgba(0,0,0,0.1)' }} />
+                  {c}
                 </span>
               ))}
             </div>
@@ -151,7 +131,7 @@ export default function Product() {
             </div>
 
             {available ? (
-              <a
+              
                 href={`https://wa.me/${WA_NUMBER}?text=${waMessage(product)}`}
                 target="_blank"
                 rel="noopener noreferrer"
