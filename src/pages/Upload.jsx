@@ -15,7 +15,7 @@ export default function Upload() {
   const { toast, show } = useToast()
 
   const [form, setForm] = useState(EMPTY)
-  const [photos, setPhotos] = useState([]) // { file, preview, existing_url }
+  const [photos, setPhotos] = useState([])
   const [activePhoto, setActivePhoto] = useState(0)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(isEdit)
@@ -33,7 +33,6 @@ export default function Upload() {
           styles: data.styles || [],
           notes:  data.notes  || '',
         })
-        // Load existing photos — support both old single photo_url and new photos array
         const existing = data.photos?.length
           ? data.photos.map(url => ({ file: null, preview: url, existing_url: url }))
           : data.photo_url
@@ -106,7 +105,6 @@ export default function Upload() {
     try {
       const productId = isEdit ? id : null
 
-      // Upload new photos, keep existing URLs
       const uploadedUrls = await Promise.all(
         photos.map(async p => {
           if (p.existing_url) return p.existing_url
@@ -125,7 +123,6 @@ export default function Upload() {
           ...form, price: parseFloat(form.price), status: 'Disponible', photo_url: null, photos: [],
         })
         if (error) throw error
-        // Re-upload with real ID
         const finalUrls = await Promise.all(
           photos.map(p => uploadPhoto(p.file, newProduct.id))
         )
@@ -177,7 +174,6 @@ export default function Upload() {
 
         {/* Photo section */}
         <div className="card" style={{ marginBottom: 12 }}>
-          {/* Main photo display */}
           {mainPhoto ? (
             <img src={mainPhoto} alt="preview"
               style={{ width: '100%', maxHeight: 300, objectFit: 'cover', display: 'block' }} />
@@ -189,7 +185,6 @@ export default function Upload() {
             </div>
           )}
 
-          {/* Thumbnail row */}
           <div style={{ padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {photos.map((p, i) => (
               <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
@@ -202,14 +197,12 @@ export default function Upload() {
                     opacity: i === activePhoto ? 1 : 0.7
                   }}
                 />
-                {/* Remove button */}
                 <button onClick={() => removePhoto(i)} style={{
                   position: 'absolute', top: -6, right: -6, width: 18, height: 18,
                   borderRadius: '50%', background: '#c62828', color: '#fff', border: 'none',
                   fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   lineHeight: 1
                 }}>✕</button>
-                {/* Move left */}
                 {i > 0 && (
                   <button onClick={() => movePhoto(i, i - 1)} style={{
                     position: 'absolute', bottom: -6, left: -6, width: 18, height: 18,
@@ -220,7 +213,6 @@ export default function Upload() {
               </div>
             ))}
 
-            {/* Add photo button */}
             {photos.length < MAX_PHOTOS && (
               <label style={{
                 width: 56, height: 56, borderRadius: 6, border: '1.5px dashed #c4b9a8',
@@ -244,18 +236,7 @@ export default function Upload() {
         {/* Basic info */}
         <div className="card" style={{ padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <label style={lblStyle}>
-                Nombre / descripción *
-                {!isEdit && form.size && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado al elegir talla</span>}
-              </label>
-              <input placeholder="Ej: M-001" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={lblStyle}>Precio (Bs.) *</label>
-                <input type="number" placeholder="120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} onBlur={handlePriceBlur} />
-              </div>
               <div>
                 <label style={lblStyle}>Talla *</label>
                 <select value={form.size} onChange={e => handleSizeChange(e.target.value)}>
@@ -263,6 +244,17 @@ export default function Upload() {
                   {SIZES.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
+              <div>
+                <label style={lblStyle}>Precio (Bs.) *</label>
+                <input type="number" placeholder="120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} onBlur={handlePriceBlur} />
+              </div>
+            </div>
+            <div>
+              <label style={lblStyle}>
+                Nombre / descripción *
+                {!isEdit && form.size && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado al elegir talla</span>}
+              </label>
+              <input placeholder="Ej: M-001" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div>
               <label style={lblStyle}>Categoría *</label>
