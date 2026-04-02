@@ -33,6 +33,41 @@ export async function getProducts(filters = {}) {
   return query
 }
 
+// ─── Sorted products (new grace + like ratio) ────────────────────────────────
+// Items < 2 days old float to top (newest first among themselves).
+// Everything else sorted by like ratio (likes / total swipes), nulls last.
+export async function getProductsSorted(filters = {}) {
+  const [productsRes, statsRes] = await Promise.all([
+    getProducts(filters),
+    supabase.from('swipe_stats').select('product_id, likes, skips'),
+  ])
+  if (productsRes.error) return productsRes
+
+  const statsMap = {}
+  ;(statsRes.data || []).forEach(s => { statsMap[s.product_id] = s })
+
+  const now = Date.now()
+  const TWO_DAYS = 2 * 24 * 60 * 60 * 1000
+
+  const withScore = (productsRes.data || []).map(p => {
+    const ageMs = now - new Date(p.created_at).getTime()
+    const isNew = ageMs < TWO_DAYS
+    const stats = statsMap[p.id]
+    const total = stats ? (stats.likes + stats.skips) : 0
+    const ratio = total > 0 ? stats.likes / total : -1
+    return { ...p, _isNew: isNew, _ratio: ratio, _ageMs: ageMs }
+  })
+
+  withScore.sort((a, b) => {
+    if (a._isNew && b._isNew) return a._ageMs - b._ageMs
+    if (a._isNew) return -1
+    if (b._isNew) return 1
+    return b._ratio - a._ratio
+  })
+
+  return { data: withScore, error: null }
+}
+
 export async function addProduct(product) {
   return supabase.from('products').insert([product]).select().single()
 }
@@ -46,7 +81,6 @@ export async function deleteProduct(id) {
 }
 
 // ─── Auto-label ───────────────────────────────────────────────────────────────
-// Returns next label like "M-003" by counting existing names that match SIZE-NNN
 export async function getNextLabelForSize(size) {
   if (!size) return ''
   const prefix = `${size}-`
@@ -54,30 +88,5 @@ export async function getNextLabelForSize(size) {
     .from('products')
     .select('name')
     .like('name', `${prefix}%`)
-  // Find the highest existing number for this size
   let max = 0
-  ;(data || []).forEach(({ name }) => {
-    const num = parseInt(name.replace(prefix, ''), 10)
-    if (!isNaN(num) && num > max) max = num
-  })
-  const next = String(max + 1).padStart(3, '0')
-  return `${prefix}${next}`
-}
-
-// ─── Photo upload ─────────────────────────────────────────────────────────────
-export async function uploadPhoto(file, productId) {
-  const ext = file.name.split('.').pop()
-  const path = `products/${productId}-${Date.now()}.${ext}`
-
-  const { error } = await supabase.storage
-    .from('product-photos')
-    .upload(path, file, { upsert: true })
-
-  if (error) throw error
-
-  const { data } = supabase.storage
-    .from('product-photos')
-    .getPublicUrl(path)
-
-  return data.publicUrl
-}
+  ;(data || []).forEach(({ name
