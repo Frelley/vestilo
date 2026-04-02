@@ -27,7 +27,7 @@ export default function Login() {
       <div style={{ width: '100%', maxWidth: 360 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <h1 style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
-            Vestilo a tu sonso
+            Vestilo a tu sonso!
           </h1>
           <p style={{ color: '#9e8a6a', fontSize: 12, letterSpacing: 2, textTransform: 'uppercase' }}>
             Panel de administración
