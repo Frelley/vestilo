@@ -39,7 +39,7 @@ const WA_SVG = (
 function ModePicker({ onPick }) {
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 28, fontWeight: 700, textAlign: 'center', marginBottom: 6 }}>Vestilo a tu sonso</div>
+      <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 28, fontWeight: 700, textAlign: 'center', marginBottom: 6 }}>Vestilo a tu sonso!</div>
       <div style={{ color: '#9e8a6a', fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 48 }}>Santa Cruz · Bolivia</div>
       <div style={{ fontSize: 13, color: '#9e8a6a', marginBottom: 20, textAlign: 'center' }}>¿Cómo querés explorar?</div>
       <div style={{ display: 'flex', gap: 14, width: '100%', maxWidth: 340 }}>
@@ -136,7 +136,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
     <div style={{ minHeight: '100vh', background: '#1a1209' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #3d3020' }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, fontWeight: 700 }}>Vestilo a tu sonso</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, fontWeight: 700 }}>Vestilo a tu sonso!</div>
           <div style={{ color: '#9e8a6a', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -345,7 +345,7 @@ export default function Catalogue() {
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', userSelect: 'none' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, fontWeight: 700 }}>Vestilo a tu sonso</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, fontWeight: 700 }}>Vestilo a tu sonso!</div>
           <div style={{ color: '#9e8a6a', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
