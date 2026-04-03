@@ -88,11 +88,6 @@ function BundleForm({ bundle, onSave, onCancel }) {
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Lote 5 — Feria Exposición" />
         </div>
         <div>
-          <label style={lbl}>Prefijo de etiqueta</label>
-          <input value={form.prefix} onChange={e => setForm(f => ({ ...f, prefix: e.target.value.toUpperCase() }))} placeholder="e.g. L5" maxLength={6} />
-          <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 4 }}>Genera etiquetas L5-001, L5-002…</div>
-        </div>
-        <div>
           <label style={lbl}>Fuente</label>
           <input value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} placeholder="e.g. Feria, Donación" />
         </div>
