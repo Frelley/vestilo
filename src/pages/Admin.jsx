@@ -5,6 +5,7 @@ import { STATUS_STYLES, daysSince, formatDate, colorsArray } from '../lib/consta
 import Header from '../components/Header.jsx'
 import ProductCard from '../components/ProductCard.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
+import { PosterModal, usePosterModal } from '../components/PosterModal.jsx'
 
 export default function Admin() {
   const [products, setProducts] = useState([])
@@ -15,6 +16,7 @@ export default function Admin() {
   const [view, setView] = useState('grid')
   const [activeTab, setActiveTab] = useState('all')
   const { toast, show } = useToast()
+  const { posterProduct, open: openPoster, close: closePoster } = usePosterModal()
 
   useEffect(() => { load() }, [])
 
@@ -131,6 +133,8 @@ export default function Admin() {
         {loading ? 'Cargando...' : `${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`}
       </div>
 
+      <PosterModal product={posterProduct} onClose={closePoster} />
+
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
       ) : filtered.length === 0 ? (
@@ -156,6 +160,11 @@ export default function Admin() {
                     {s.likes > 0 && <span style={{ color: '#9e8a6a', marginLeft: 'auto' }}>{Math.round((s.likes / ((s.likes || 0) + (s.skips || 0))) * 100)}%</span>}
                   </div>
                 )}
+                <div style={{ padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4' }}>
+                  <button onClick={() => openPoster(p)} style={{ width: '100%', padding: '6px', borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    🖼️ Poster
+                  </button>
+                </div>
               </div>
             )
           })}
@@ -210,6 +219,7 @@ export default function Admin() {
                         {p.status !== 'Disponible' && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#2e7d32' }} onClick={() => handleStatusChange(p.id, 'Disponible')}>Disponible</button>}
                         {p.status !== 'Vendido'    && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828' }} onClick={() => handleStatusChange(p.id, 'Vendido')}>Vendido</button>}
                         {p.status !== 'Reservado'  && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#e65100' }} onClick={() => handleStatusChange(p.id, 'Reservado')}>Reservar</button>}
+                        <button className="btn" style={{ fontSize: 11, padding: '3px 7px' }} onClick={() => openPoster(p)}>🖼️</button>
                         <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828', borderColor: '#ffcdd2' }} onClick={() => handleDelete(p.id, p.name)}>✕</button>
                       </div>
                     </td>
