@@ -329,7 +329,17 @@ export default function Catalogue() {
     else setDrag(d => ({ ...d, active: false, x: 0 }))
   }
   function onTap() {
-    if (Math.abs(dragRef.current.x) < 8) { setFlipped(f => !f); setPhotoIdx(0) }
+    if (Math.abs(dragRef.current.x) < 8) {
+      if (flipped) {
+        setFlipped(false); setPhotoIdx(0)
+      } else if (photos.length > 1) {
+        const next = photoIdx + 1
+        if (next < photos.length) setPhotoIdx(next)
+        else { setFlipped(true); setPhotoIdx(0) }
+      } else {
+        setFlipped(true)
+      }
+    }
   }
 
   const dx = swipeDir === 'left' ? -420 : swipeDir === 'right' ? 420 : drag.x
@@ -431,7 +441,7 @@ export default function Catalogue() {
                       <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
                       <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {current.price}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>Toca para ver detalles</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>{photos.length > 1 ? 'Toca para cambiar foto' : 'Toca para ver detalles'}</div>
                   </div>
                 </>
               ) : (
