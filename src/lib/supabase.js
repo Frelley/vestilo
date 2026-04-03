@@ -5,15 +5,13 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// ─── Auth helpers ────────────────────────────────────────────────────────────
+// ─── Auth ────────────────────────────────────────────────────────────────────
 export async function signIn(email, password) {
   return supabase.auth.signInWithPassword({ email, password })
 }
-
 export async function signOut() {
   return supabase.auth.signOut()
 }
-
 export async function getSession() {
   return supabase.auth.getSession()
 }
@@ -25,10 +23,11 @@ export async function getProducts(filters = {}) {
     .select('*')
     .order('created_at', { ascending: false })
 
-  if (filters.status) query = query.eq('status', filters.status)
-  if (filters.size)   query = query.eq('size', filters.size)
-  if (filters.color)  query = query.eq('color', filters.color)
+  if (filters.status)   query = query.eq('status', filters.status)
+  if (filters.size)     query = query.eq('size', filters.size)
+  if (filters.color)    query = query.eq('color', filters.color)
   if (filters.priceMax) query = query.lte('price', filters.priceMax)
+  if (filters.bundle_id) query = query.eq('bundle_id', filters.bundle_id)
 
   return query
 }
@@ -45,8 +44,18 @@ export async function deleteProduct(id) {
   return supabase.from('products').delete().eq('id', id)
 }
 
-// ─── Sorted products (psychology-optimized) v2.5 ─────────────────────────────
-// Order: [top 3 by like-ratio] → [new arrivals <2d] → [price anchor] → [rest by ratio]
+// ─── Mark as sold — captures actual sale price + discount ────────────────────
+// Call this instead of updateProduct when marking Vendido
+export async function markSold(id, { sold_price, discount = 0 }) {
+  return supabase.from('products').update({
+    status: 'Vendido',
+    sold_price,
+    discount,
+    sold_at: new Date().toISOString(),
+  }).eq('id', id).select().single()
+}
+
+// ─── Sorted products (psychology-optimized) ───────────────────────────────────
 export async function getProductsSorted(filters = {}) {
   const [productsRes, statsRes] = await Promise.all([
     getProducts(filters),
@@ -65,60 +74,86 @@ export async function getProductsSorted(filters = {}) {
     const isNew = ageMs < TWO_DAYS
     const stats = statsMap[p.id]
     const total = stats ? (stats.likes + stats.skips) : 0
-    // Items with no swipe data get ratio 0 (neutral), not -1
     const ratio = total >= 5 ? stats.likes / total : 0
     return { ...p, _isNew: isNew, _ratio: ratio, _ageMs: ageMs }
   })
 
-  // Sort proven items by ratio desc (needs ≥5 swipes to count)
   const proven = scored
     .filter(p => !p._isNew)
     .sort((a, b) => b._ratio - a._ratio)
 
   const newArrivals = scored
     .filter(p => p._isNew)
-    .sort((a, b) => a._ageMs - b._ageMs) // newest first
+    .sort((a, b) => a._ageMs - b._ageMs)
 
-  // Price anchor: highest-priced item not already in top 3
-  // Pulled out and inserted at position 6 (after top3 + new)
   const top3Ids = new Set(proven.slice(0, 3).map(p => p.id))
   const anchorCandidate = [...proven]
     .filter(p => !top3Ids.has(p.id))
     .sort((a, b) => b.price - a.price)[0]
 
   const anchorId = anchorCandidate?.id
+  const rest = proven.slice(3).filter(p => p.id !== anchorId)
 
-  // Rest = everything after top3 + anchor, sorted by ratio
-  const rest = proven
-    .slice(3)
-    .filter(p => p.id !== anchorId)
-
-  // Assemble final order
   const result = [
-    ...proven.slice(0, 3),   // 1-3: social proof leaders
-    ...newArrivals,           // 4-5: novelty (variable count)
-    ...(anchorCandidate ? [anchorCandidate] : []), // price anchor
-    ...rest,                  // remainder by ratio
+    ...proven.slice(0, 3),
+    ...newArrivals,
+    ...(anchorCandidate ? [anchorCandidate] : []),
+    ...rest,
   ]
 
   return { data: result, error: null }
 }
 
-// ─── Auto-label ───────────────────────────────────────────────────────────────
+// ─── Auto-label with recycling ────────────────────────────────────────────────
+// 1. Check freed_labels first (recycled from sold/deleted products)
+// 2. Fall back to max+1 from existing products
 export async function getNextLabelForSize(size) {
   if (!size) return ''
+
+  // Check freed labels first
+  const { data: freed } = await supabase
+    .from('freed_labels')
+    .select('id, label')
+    .eq('size', size)
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  if (freed?.length > 0) {
+    // Claim this freed label by deleting it
+    await supabase.from('freed_labels').delete().eq('id', freed[0].id)
+    return freed[0].label
+  }
+
+  // No freed labels — find next sequential number
   const prefix = `${size}-`
   const { data } = await supabase
     .from('products')
     .select('name')
     .like('name', `${prefix}%`)
+
   let max = 0
   ;(data || []).forEach(({ name }) => {
     const num = parseInt(name.replace(prefix, ''), 10)
     if (!isNaN(num) && num > max) max = num
   })
+
   const next = String(max + 1).padStart(3, '0')
   return `${prefix}${next}`
+}
+
+// Free a label back into the pool (call when a product is deleted or re-listed)
+export async function freeLabel(size, label) {
+  if (!size || !label) return
+  // Check it's not already in the freed pool
+  const { data } = await supabase
+    .from('freed_labels')
+    .select('id')
+    .eq('label', label)
+    .limit(1)
+
+  if (!data?.length) {
+    await supabase.from('freed_labels').insert([{ size, label }])
+  }
 }
 
 // ─── Photo upload ─────────────────────────────────────────────────────────────
@@ -137,4 +172,76 @@ export async function uploadPhoto(file, productId) {
     .getPublicUrl(path)
 
   return data.publicUrl
+}
+
+// ─── Bundles ─────────────────────────────────────────────────────────────────
+export async function createBundle(bundleData) {
+  return supabase.from('bundles').insert([bundleData]).select().single()
+}
+
+export async function getBundles(filters = {}) {
+  let query = supabase
+    .from('bundles')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (filters.status) query = query.eq('status', filters.status)
+  return query
+}
+
+export async function getBundle(id) {
+  return supabase.from('bundles').select('*').eq('id', id).single()
+}
+
+export async function updateBundle(id, updates) {
+  return supabase.from('bundles').update(updates).eq('id', id).select().single()
+}
+
+export async function deleteBundle(id) {
+  return supabase.from('bundles').delete().eq('id', id)
+}
+
+export async function getBundleWithProducts(bundleId) {
+  const [bundleRes, productsRes] = await Promise.all([
+    getBundle(bundleId),
+    supabase
+      .from('products')
+      .select('*')
+      .eq('bundle_id', bundleId)
+      .order('created_at', { ascending: false }),
+  ])
+  if (bundleRes.error) return bundleRes
+  return {
+    data: { ...bundleRes.data, products: productsRes.data || [] },
+    error: null,
+  }
+}
+
+export async function getBundleAudit(bundleId, limit = 50) {
+  return supabase
+    .from('bundle_audit')
+    .select('*')
+    .eq('bundle_id', bundleId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+}
+
+// Generate next label within a bundle (e.g. "L5-001", "L5-002")
+export async function getNextBundleLabel(bundlePrefix) {
+  if (!bundlePrefix) return ''
+
+  const { data } = await supabase
+    .from('products')
+    .select('bundle_label')
+    .like('bundle_label', `${bundlePrefix}-%`)
+
+  let max = 0
+  ;(data || []).forEach(({ bundle_label }) => {
+    if (!bundle_label) return
+    const num = parseInt(bundle_label.replace(`${bundlePrefix}-`, ''), 10)
+    if (!isNaN(num) && num > max) max = num
+  })
+
+  const next = String(max + 1).padStart(3, '0')
+  return `${bundlePrefix}-${next}`
 }
