@@ -208,7 +208,6 @@ export default function Catalogue() {
   const [drag, setDrag] = useState({ active: false, x: 0, startX: 0, startY: 0 })
   const [swipeDir, setSwipeDir] = useState(null)
   const [photoIdx, setPhotoIdx] = useState(0)
-  const [flipped, setFlipped] = useState(false)
   const dragRef = useRef(drag)
   dragRef.current = drag
 
@@ -232,7 +231,7 @@ export default function Catalogue() {
       if (p.price > priceMax) return false
       return true
     })
-    setQueue(filtered); setIndex(0); setPhotoIdx(0); setFlipped(false)
+    setQueue(filtered); setIndex(0); setPhotoIdx(0)
   }, [filterSize, priceMax, products])
 
   function pickMode(m) { setMode(m); saveMode(m) }
@@ -299,7 +298,7 @@ export default function Catalogue() {
     setSwipeDir(dir)
     setTimeout(() => { setSwipeDir(null); setDrag({ active: false, x: 0, startX: 0, startY: 0 }); cb() }, 320)
   }
-  function advance() { setIndex(i => i + 1); setPhotoIdx(0); setFlipped(false) }
+  function advance() { setIndex(i => i + 1); setPhotoIdx(0) }
   function doLike() {
     if (!current) return
     recordInteraction(current.id, 'like')
@@ -311,7 +310,7 @@ export default function Catalogue() {
     recordInteraction(current.id, 'skip')
     animate('left', advance)
   }
-  function restart() { setIndex(0); setPhotoIdx(0); setFlipped(false) }
+  function restart() { setIndex(0); setPhotoIdx(0) }
   function onStart(e) {
     const x = e.touches ? e.touches[0].clientX : e.clientX
     const y = e.touches ? e.touches[0].clientY : e.clientY
@@ -330,15 +329,7 @@ export default function Catalogue() {
   }
   function onTap() {
     if (Math.abs(dragRef.current.x) < 8) {
-      if (flipped) {
-        setFlipped(false); setPhotoIdx(0)
-      } else if (photos.length > 1) {
-        const next = photoIdx + 1
-        if (next < photos.length) setPhotoIdx(next)
-        else { setFlipped(true); setPhotoIdx(0) }
-      } else {
-        setFlipped(true)
-      }
+      setPhotoIdx(p => (p + 1) % Math.max(photos.length, 1))
     }
   }
 
@@ -409,8 +400,6 @@ export default function Catalogue() {
             <div onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} onClick={onTap}
               style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none' }}>
-              {!flipped ? (
-                <>
                   {photos.length > 0 ? <img src={photos[photoIdx]} alt={current.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} draggable={false} />
                     : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100 }}>👕</div>}
                   {photos.length > 1 && (
@@ -443,23 +432,6 @@ export default function Catalogue() {
                     </div>
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>{photos.length > 1 ? 'Toca para cambiar foto' : 'Toca para ver detalles'}</div>
                   </div>
-                </>
-              ) : (
-                <div style={{ height: '100%', background: '#1a1209', padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 20, fontWeight: 700, marginBottom: 8, lineHeight: 1.3 }}>{current.name}</div>
-                  <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 24, fontWeight: 700, marginBottom: 16 }}>Bs. {current.price}</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-                    <span style={{ fontSize: 12, padding: '5px 10px', borderRadius: 99, border: '1px solid #3d3020', color: '#f5e6c8' }}>Talla {current.size}</span>
-                    {currentColors.map(c => (
-                      <span key={c} style={{ fontSize: 12, padding: '5px 10px', borderRadius: 99, border: '1px solid #3d3020', color: '#f5e6c8', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc' }} />{c}
-                      </span>
-                    ))}
-                  </div>
-                  {photos.length > 1 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{photos.map((url, i) => <img key={i} src={url} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid #3d3020', opacity: 0.9 }} />)}</div>}
-                  <div style={{ marginTop: 'auto', paddingTop: 16, fontSize: 11, color: '#9e8a6a', textAlign: 'center' }}>Toca para volver a la foto</div>
-                </div>
-              )}
             </div>
           </div>
         )}
