@@ -14,7 +14,7 @@ export default function Upload() {
   const isEdit     = Boolean(id)
   const { toast, show } = useToast()
 
-  const [form, setForm]       = useState(EMPTY)
+  const [form, setForm]       = useState(EMPTY)h
   const [photos, setPhotos]   = useState([])
   const [activePhoto, setActivePhoto] = useState(0)
   const [saving, setSaving]   = useState(false)
@@ -316,24 +316,11 @@ export default function Upload() {
             </select>
           )}
 
-          {form.bundle_id && (
-            <div style={{ marginTop: 10 }}>
-              <label style={lblStyle}>
-                Etiqueta en el lote
-                {selectedBundle?.prefix && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado</span>}
-              </label>
-              <input
-                value={form.bundle_label}
-                onChange={e => setForm(f => ({ ...f, bundle_label: e.target.value }))}
-                placeholder={selectedBundle?.prefix ? `${selectedBundle.prefix}-001` : 'Etiqueta de lote'}
-              />
-              {selectedBundle && (
-                <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 5 }}>
-                  Costo del lote: <strong>Bs. {selectedBundle.cost_per_unit}</strong> por prenda · {selectedBundle.units_remaining ?? '—'} disponibles
-                </div>
-              )}
-            </div>
-          )}
+          {form.bundle_id && selectedBundle && (
+          <div style={{ marginTop: 10, fontSize: 11, color: '#9e8a6a' }}>
+            Costo del lote: <strong style={{ color: '#1a1209' }}>Bs. {selectedBundle.cost_per_unit}</strong> por prenda · {selectedBundle.units_remaining ?? '—'} disponibles
+          </div>
+        )}
         </div>
 
         {/* Color */}
