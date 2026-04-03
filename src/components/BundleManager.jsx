@@ -54,7 +54,6 @@ function BundleForm({ bundle, onSave, onCancel }) {
     source:        bundle?.source        || '',
     cost_per_unit: bundle?.cost_per_unit || '',
     total_quantity: bundle?.total_quantity || '',
-    prefix:        bundle?.prefix        || '',   // label prefix e.g. "L5"
     status:        bundle?.status        || 'active',
   })
   const [saving, setSaving] = useState(false)
