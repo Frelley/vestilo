@@ -6,6 +6,14 @@ import { SIZES, COLOR_DOTS, WA_NUMBER, colorsArray } from '../lib/constants.js'
 const SWIPE_THRESHOLD = 75
 const STORAGE_KEY = 'vestilo-liked'
 const MODE_KEY = 'vestilo-mode'
+const ONBOARDING_KEY = 'vestilo-onboarded'
+
+function getOnboarded() {
+  try { return localStorage.getItem(ONBOARDING_KEY) === '1' } catch { return false }
+}
+function saveOnboarded() {
+  try { localStorage.setItem(ONBOARDING_KEY, '1') } catch {}
+}
 
 function getLiked() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] }
@@ -57,7 +65,56 @@ function ModePicker({ onPick }) {
           </button>
         ))}
       </div>
+      {showOnboarding && (
+        <OnboardingTooltip onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
+      )}
     </div>
+  )
+}
+
+function OnboardingTooltip({ onDismiss }) {
+  return (
+    <>
+      <div onClick={onDismiss} style={{ position: 'fixed', inset: 0, zIndex: 300 }} />
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
+        background: '#1a1209', borderTop: '1px solid #3d3020',
+        borderRadius: '18px 18px 0 0',
+        padding: '20px 24px 40px',
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
+        animation: 'slideup 0.3s ease',
+      }}>
+        <style>{`@keyframes slideup { from { transform: translateY(100%) } to { transform: translateY(0) } }`}</style>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#3d3020' }} />
+        </div>
+        <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700, marginBottom: 20 }}>
+          ¿Cómo funciona?
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+          {[
+            { icon: '♥', label: 'Guardá lo que te gusta', desc: 'Toca el corazón en swipe, o el 🤍 en catálogo para guardar prendas.' },
+            { icon: '🛍️', label: 'Armá tu pedido', desc: 'Tus favoritas se acumulan en una lista. Seleccioná las que querés comprar.' },
+            { icon: '💬', label: 'Pedí todo junto por WhatsApp', desc: 'Te conectamos directo con la tienda para cerrar todo en un mensaje.' },
+          ].map(({ icon, label, desc }) => (
+            <div key={label} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#241810', border: '1px solid #3d3020', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{icon}</div>
+              <div>
+                <div style={{ color: '#f5e6c8', fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{label}</div>
+                <div style={{ color: '#9e8a6a', fontSize: 12, lineHeight: 1.5 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={onDismiss} style={{
+          width: '100%', padding: '14px', borderRadius: 10,
+          background: '#f5e6c8', color: '#1a1209', border: 'none',
+          fontSize: 14, fontWeight: 700, cursor: 'pointer',
+        }}>
+          Entendido →
+        </button>
+      </div>
+    </>
   )
 }
 
@@ -208,6 +265,7 @@ export default function Catalogue() {
   const [drag, setDrag] = useState({ active: false, x: 0, startX: 0, startY: 0 })
   const [swipeDir, setSwipeDir] = useState(null)
   const [photoIdx, setPhotoIdx] = useState(0)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const dragRef = useRef(drag)
   dragRef.current = drag
 
@@ -234,7 +292,10 @@ export default function Catalogue() {
     setQueue(filtered); setIndex(0); setPhotoIdx(0)
   }, [filterSize, priceMax, products])
 
-  function pickMode(m) { setMode(m); saveMode(m) }
+  function pickMode(m) {
+    setMode(m); saveMode(m)
+    if (!getOnboarded()) setShowOnboarding(true)
+  }
   function switchMode() { pickMode(mode === 'swipe' ? 'grid' : 'swipe') }
   function toggleLike(p) {
     setLikedIds(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])
@@ -286,7 +347,12 @@ export default function Catalogue() {
   )
 
   if (mode === 'grid') return (
-    <GridView products={queue} likedIds={likedIds} onToggleLike={toggleLike} onSwitchMode={switchMode} filterBar={filterBar} likedProducts={likedProducts} onRemoveLiked={removeLiked} />
+    <>
+      <GridView products={queue} likedIds={likedIds} onToggleLike={toggleLike} onSwitchMode={switchMode} filterBar={filterBar} likedProducts={likedProducts} onRemoveLiked={removeLiked} />
+      {showOnboarding && (
+        <OnboardingTooltip onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
+      )}
+    </>
   )
 
   // ── Swipe mode ────────────────────────────────────────────────────────────
