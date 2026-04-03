@@ -1,292 +1,476 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { getProducts, updateProduct, deleteProduct, freeLabel, supabase } from '../lib/supabase.js'
-import { STATUS_STYLES, daysSince, formatDate, colorsArray } from '../lib/constants.js'
-import Header from '../components/Header.jsx'
-import ProductCard from '../components/ProductCard.jsx'
-import BundleManager from '../components/BundleManager.jsx'
-import { Toast, useToast } from '../components/Toast.jsx'
-import { PosterModal, usePosterModal } from '../components/PosterModal.jsx'
-import { ShareModal, useShareModal } from '../components/ShareModal.jsx'
-import { SellModal, useSellModal } from '../components/SellModal.jsx'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  getBundles, createBundle, updateBundle, deleteBundle,
+  getBundleWithProducts, getBundleAudit
+} from '../lib/supabase.js'
+import { Toast, useToast } from './Toast.jsx'
+import { STATUS_STYLES, formatDate } from '../lib/constants.js'
 
-export default function Admin() {
-  const [products, setProducts]   = useState([])
-  const [swipeStats, setSwipeStats] = useState({})
+// ─── Bundle status pill ───────────────────────────────────────────────────────
+const BUNDLE_STATUS = {
+  active:    { bg: '#e8f5e9', color: '#2e7d32', label: 'Activo' },
+  completed: { bg: '#e3f2fd', color: '#1565c0', label: 'Completado' },
+  archived:  { bg: '#fafafa', color: '#9e8a6a', label: 'Archivado' },
+}
+
+// ─── Profit badge ─────────────────────────────────────────────────────────────
+function ProfitBadge({ value }) {
+  const positive = value > 0
+  const zero     = value === 0
+  return (
+    <span style={{
+      fontWeight: 700,
+      color: zero ? '#9e8a6a' : positive ? '#2e7d32' : '#c62828',
+      fontFamily: "'Playfair Display', serif",
+    }}>
+      {positive ? '+' : ''}Bs. {(value || 0).toFixed(2)}
+    </span>
+  )
+}
+
+// ─── Margin bar ───────────────────────────────────────────────────────────────
+function MarginBar({ value }) {
+  const pct   = parseFloat(value) || 0
+  const color = pct > 30 ? '#2e7d32' : pct > 0 ? '#e65100' : '#c62828'
+  const width = Math.min(Math.abs(pct), 100)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: 1, height: 6, background: '#f0ede8', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${width}%`, background: color, borderRadius: 3, transition: 'width 0.4s ease' }} />
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 700, color, minWidth: 44, textAlign: 'right' }}>
+        {pct > 0 ? '+' : ''}{pct.toFixed(1)}%
+      </span>
+    </div>
+  )
+}
+
+// ─── Create / Edit Bundle Form ────────────────────────────────────────────────
+function BundleForm({ bundle, onSave, onCancel }) {
+  const editing = Boolean(bundle)
+  const [form, setForm] = useState({
+    name:          bundle?.name          || '',
+    description:   bundle?.description   || '',
+    source:        bundle?.source        || '',
+    cost_per_unit: bundle?.cost_per_unit || '',
+    total_quantity: bundle?.total_quantity || '',
+    status:        bundle?.status        || 'active',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState('')
+
+  async function handleSave() {
+    if (!form.name || !form.cost_per_unit || !form.total_quantity) {
+      setError('Nombre, costo y cantidad son requeridos')
+      return
+    }
+    setSaving(true)
+    setError('')
+    const payload = {
+      ...form,
+      cost_per_unit:  parseFloat(form.cost_per_unit),
+      total_quantity: parseInt(form.total_quantity, 10),
+    }
+    await onSave(payload)
+    setSaving(false)
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 12, padding: 20, marginBottom: 16 }}>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#1a1209' }}>
+        {editing ? 'Editar lote' : 'Nuevo lote'}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div style={{ gridColumn: '1/-1' }}>
+          <label style={lbl}>Nombre del lote *</label>
+          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Lote 5 — Feria Exposición" />
+        </div>
+        <div>
+          <label style={lbl}>Fuente</label>
+          <input value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} placeholder="e.g. Feria, Donación" />
+        </div>
+        <div>
+          <label style={lbl}>Costo por prenda (Bs.) *</label>
+          <input type="number" value={form.cost_per_unit} onChange={e => setForm(f => ({ ...f, cost_per_unit: e.target.value }))} placeholder="35" />
+        </div>
+        <div>
+          <label style={lbl}>Cantidad total *</label>
+          <input type="number" value={form.total_quantity} onChange={e => setForm(f => ({ ...f, total_quantity: e.target.value }))} placeholder="50" />
+        </div>
+        <div style={{ gridColumn: '1/-1' }}>
+          <label style={lbl}>Notas internas</label>
+          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ resize: 'vertical' }} placeholder="Observaciones sobre este lote..." />
+        </div>
+        {editing && (
+          <div>
+            <label style={lbl}>Estado</label>
+            <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+              <option value="active">Activo</option>
+              <option value="completed">Completado</option>
+              <option value="archived">Archivado</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      {form.cost_per_unit && form.total_quantity && (
+        <div style={{ background: '#f0ede8', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#3d3020' }}>
+          Inversión total estimada: <strong style={{ fontFamily: "'Playfair Display', serif" }}>Bs. {(parseFloat(form.cost_per_unit) * parseInt(form.total_quantity, 10)).toFixed(2)}</strong>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ background: '#ffebee', color: '#c62828', padding: '8px 12px', borderRadius: 6, fontSize: 13, marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={onCancel} className="btn" style={{ flex: 1 }}>Cancelar</button>
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ flex: 2 }}>
+          {saving ? <span className="spinner" style={{ width: 16, height: 16, borderTopColor: '#f5e6c8' }} /> : editing ? 'Guardar cambios' : 'Crear lote →'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Bundle Detail Drawer ─────────────────────────────────────────────────────
+function BundleDetail({ bundleId, onClose }) {
+  const [bundle, setBundle] = useState(null)
+  const [audit, setAudit]   = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!bundleId) return
+    setLoading(true)
+    Promise.all([
+      getBundleWithProducts(bundleId),
+      getBundleAudit(bundleId, 30),
+    ]).then(([bundleRes, auditRes]) => {
+      if (bundleRes.data) setBundle(bundleRes.data)
+      if (auditRes.data)  setAudit(auditRes.data)
+      setLoading(false)
+    })
+  }, [bundleId])
+
+  if (!bundleId) return null
+
+  const bs = BUNDLE_STATUS[bundle?.status] || BUNDLE_STATUS.active
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 300, backdropFilter: 'blur(2px)' }} />
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 500,
+        background: '#faf8f5', zIndex: 301, overflowY: 'auto',
+        boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e8e0d4', position: 'sticky', top: 0, background: '#faf8f5', zIndex: 1 }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 20, color: '#9e8a6a', cursor: 'pointer' }}>←</button>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#1a1209' }}>Detalle del lote</div>
+          <div style={{ width: 28 }} />
+        </div>
+
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
+        ) : !bundle ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#9e8a6a' }}>No se encontró el lote</div>
+        ) : (
+          <div style={{ padding: 20 }}>
+            {/* Header */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: '#1a1209' }}>{bundle.name}</div>
+                <span className="badge" style={{ background: bs.bg, color: bs.color }}>{bs.label}</span>
+              </div>
+              {bundle.source && <div style={{ fontSize: 13, color: '#9e8a6a' }}>Fuente: {bundle.source}</div>}
+              {bundle.description && <div style={{ fontSize: 13, color: '#9e8a6a', marginTop: 4 }}>{bundle.description}</div>}
+              <div style={{ fontSize: 11, color: '#c4b9a8', marginTop: 4 }}>Creado {formatDate(bundle.created_at)}</div>
+            </div>
+
+            {/* KPI grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+              {[
+                ['💰 Inversión', `Bs. ${(bundle.total_cost || 0).toFixed(2)}`, '#1a1209'],
+                ['📈 Ingresos', `Bs. ${(bundle.total_revenue || 0).toFixed(2)}`, '#2e7d32'],
+                ['✂️ Descuentos', `− Bs. ${(bundle.total_discounts || 0).toFixed(2)}`, '#e65100'],
+                ['📦 Costo unit.', `Bs. ${(bundle.cost_per_unit || 0).toFixed(2)}`, '#1a1209'],
+              ].map(([label, val, color]) => (
+                <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color }}>{val}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Ganancia + margen */}
+            <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, padding: '14px 16px', marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Rentabilidad</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, color: '#3d3020' }}>Ganancia bruta</span>
+                <ProfitBadge value={bundle.gross_profit} />
+              </div>
+              <MarginBar value={bundle.profit_margin_percent} />
+              {bundle.avg_selling_price > 0 && (
+                <div style={{ fontSize: 12, color: '#9e8a6a', marginTop: 10 }}>
+                  Precio promedio de venta: <strong style={{ color: '#1a1209' }}>Bs. {(bundle.avg_selling_price || 0).toFixed(2)}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Progress */}
+            <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, padding: '14px 16px', marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Progreso del lote</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                {[
+                  ['Vendidas', bundle.units_sold || 0, '#2e7d32'],
+                  ['Reservadas', bundle.units_reserved || 0, '#e65100'],
+                  ['Disponibles', bundle.units_remaining || 0, '#9e8a6a'],
+                ].map(([label, val, color]) => (
+                  <div key={label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+                    <div style={{ fontSize: 11, color: '#9e8a6a' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: '#f0ede8', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${bundle.total_quantity > 0 ? ((bundle.units_sold || 0) / bundle.total_quantity * 100) : 0}%`,
+                  background: 'linear-gradient(90deg, #2e7d32, #66bb6a)',
+                  transition: 'width 0.5s ease',
+                  borderRadius: 4,
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 6, textAlign: 'right' }}>
+                {bundle.units_sold || 0} / {bundle.total_quantity} vendidas ({bundle.total_quantity > 0 ? Math.round((bundle.units_sold || 0) / bundle.total_quantity * 100) : 0}%)
+              </div>
+            </div>
+
+            {/* Products list */}
+            {bundle.products?.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Prendas en este lote ({bundle.products.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {bundle.products.map(p => {
+                    const st = STATUS_STYLES[p.status] || STATUS_STYLES.Disponible
+                    return (
+                      <div key={p.id} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {p.photo_url
+                          ? <img src={p.photo_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                          : <div style={{ width: 36, height: 36, background: '#f0ede8', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>👕</div>
+                        }
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: '#1a1209' }}>{p.name}</div>
+                          <div style={{ fontSize: 11, color: '#9e8a6a' }}>
+                            {p.bundle_label && <span style={{ marginRight: 6 }}>🏷 {p.bundle_label}</span>}
+                            Talla {p.size} · Bs. {p.price}
+                            {p.status === 'Vendido' && p.sold_price && p.sold_price !== p.price && (
+                              <span style={{ color: p.sold_price < p.price ? '#c62828' : '#2e7d32' }}> → Bs. {p.sold_price}</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="badge" style={{ background: st.bg, color: st.color, flexShrink: 0 }}>{p.status}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Audit log */}
+            {audit.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Actividad reciente</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {audit.map(entry => (
+                    <div key={entry.id} style={{ display: 'flex', gap: 10, fontSize: 12, color: '#3d3020', borderLeft: '2px solid #e8e0d4', paddingLeft: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontWeight: 600 }}>{entry.action}</span>
+                        {entry.details?.new_status && <span style={{ color: '#9e8a6a' }}> → {entry.details.new_status}</span>}
+                        {entry.details?.sold_price && entry.details.sold_price !== entry.details.price && (
+                          <span style={{ color: '#e65100' }}> (Bs. {entry.details.sold_price})</span>
+                        )}
+                      </div>
+                      <div style={{ color: '#c4b9a8', whiteSpace: 'nowrap' }}>
+                        {new Date(entry.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ─── Main BundleManager ───────────────────────────────────────────────────────
+export default function BundleManager() {
+  const [bundles, setBundles]     = useState([])
   const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [view, setView]           = useState('grid')
-  const [activeTab, setActiveTab] = useState('all')
-
-  const { toast, show }                           = useToast()
-  const { posterProduct, open: openPoster, close: closePoster } = usePosterModal()
-  const { shareProduct, open: openShare, close: closeShare }   = useShareModal()
-  const { sellProduct, open: openSell, close: closeSell }      = useSellModal()
+  const [showCreate, setShowCreate] = useState(false)
+  const [editingBundle, setEditingBundle] = useState(null)
+  const [detailId, setDetailId]   = useState(null)
+  const { toast, show } = useToast()
 
   useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
-    const [{ data: prods }, { data: swipes }] = await Promise.all([
-      getProducts(),
-      supabase.from('swipe_stats').select('*'),
-    ])
-    if (prods) setProducts(prods)
-    if (swipes) {
-      const map = {}
-      swipes.forEach(s => { map[s.product_id] = s })
-      setSwipeStats(map)
-    }
+    const { data } = await getBundles()
+    if (data) setBundles(data)
     setLoading(false)
   }
 
-  // For non-Vendido status changes (Disponible ↔ Reservado)
-  async function handleStatusChange(id, status) {
-    if (status === 'Vendido') {
-      // Route through SellModal to capture price + discount
-      const product = products.find(p => p.id === id)
-      if (product) openSell(product)
-      return
-    }
-    await updateProduct(id, { status })
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, status } : p))
-    show(`Marcado como ${status}`)
+  async function handleCreate(payload) {
+    const { data, error } = await createBundle(payload)
+    if (error) { show('Error al crear lote', 'error'); return }
+    setBundles(prev => [data, ...prev])
+    setShowCreate(false)
+    show('Lote creado ✓')
   }
 
-  // Called when SellModal confirms the sale
-  async function handleSold(updatedProduct) {
-    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p))
-    show('Venta registrada ✓')
+  async function handleUpdate(id, payload) {
+    const { data, error } = await updateBundle(id, payload)
+    if (error) { show('Error al actualizar', 'error'); return }
+    setBundles(prev => prev.map(b => b.id === id ? data : b))
+    setEditingBundle(null)
+    show('Lote actualizado ✓')
   }
 
-  async function handleDelete(id, name, size, label) {
-    if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return
-    await deleteProduct(id)
-    // Free the label for reuse
-    if (size && label) await freeLabel(size, label)
-    setProducts(prev => prev.filter(p => p.id !== id))
-    show('Producto eliminado')
+  async function handleDelete(b) {
+    if (!confirm(`¿Eliminar "${b.name}"? Los productos del lote quedarán sin asignar.`)) return
+    await deleteBundle(b.id)
+    setBundles(prev => prev.filter(x => x.id !== b.id))
+    show('Lote eliminado')
   }
 
-  const summary = {
-    total:     products.length,
-    available: products.filter(p => p.status === 'Disponible').length,
-    reserved:  products.filter(p => p.status === 'Reservado').length,
-    sold:      products.filter(p => p.status === 'Vendido').length,
-    old:       products.filter(p => p.status === 'Disponible' && daysSince(p.created_at) > 30).length,
-  }
-
-  const filtered = products.filter(p => {
-    const q = search.toLowerCase()
-    if (q && !`${p.name} ${colorsArray(p.color).join(' ')} ${p.size} ${p.cat} ${p.bundle_label || ''}`.toLowerCase().includes(q)) return false
-    if (filterStatus && p.status !== filterStatus) return false
-    if (activeTab === 'old'       && !(p.status === 'Disponible' && daysSince(p.created_at) > 30)) return false
-    if (activeTab === 'sold'      && p.status !== 'Vendido') return false
-    if (activeTab === 'available' && p.status !== 'Disponible') return false
-    if (activeTab === 'popular') {
-      const s = swipeStats[p.id]
-      if (!s || s.likes === 0) return false
-    }
-    return true
-  }).sort((a, b) => {
-    if (activeTab === 'popular') {
-      const la = swipeStats[a.id]?.likes || 0
-      const lb = swipeStats[b.id]?.likes || 0
-      return lb - la
-    }
-    return 0
-  })
-
-  const tabStyle = t => ({
-    padding: '8px 14px', background: 'transparent',
-    border: 'none', borderBottom: activeTab === t ? '2px solid #1a1209' : '2px solid transparent',
-    fontSize: 13, cursor: 'pointer', color: activeTab === t ? '#1a1209' : '#9e8a6a',
-    fontWeight: activeTab === t ? 500 : 400, marginBottom: -1, whiteSpace: 'nowrap',
-  })
+  const summaryTotals = bundles.reduce((acc, b) => ({
+    invested: acc.invested + (b.total_cost || 0),
+    revenue:  acc.revenue  + (b.total_revenue || 0),
+    profit:   acc.profit   + (b.gross_profit || 0),
+    discounts: acc.discounts + (b.total_discounts || 0),
+  }), { invested: 0, revenue: 0, profit: 0, discounts: 0 })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
-      <Header admin />
+    <div style={{ padding: 16 }}>
       <Toast toast={toast} />
+      <BundleDetail bundleId={detailId} onClose={() => setDetailId(null)} />
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, padding: '12px 16px' }}>
-        {[
-          ['Total',       summary.total,     '#1a1209'],
-          ['Disponibles', summary.available,  '#2e7d32'],
-          ['Reservados',  summary.reserved,   '#e65100'],
-          ['Vendidos',    summary.sold,       '#c62828'],
-          ['+30 días',    summary.old,        '#9e8a6a'],
-        ].map(([label, val, color]) => (
-          <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px 10px', borderTop: `3px solid ${color}` }}>
-            <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, padding: '0 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', overflowX: 'auto' }}>
-        {[
-          ['all',       'Todos'],
-          ['available', 'Disponibles'],
-          ['popular',   'Más gustados'],
-          ['sold',      'Vendidos'],
-          ['old',       '+30 días'],
-          ['bundles',   '📦 Lotes'],
-        ].map(([key, label]) => (
-          <button key={key} style={tabStyle(key)} onClick={() => { setActiveTab(key); setFilterStatus('') }}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Toolbar — hidden on Bundles tab */}
-      {activeTab !== 'bundles' && (
-        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', flexWrap: 'wrap' }}>
-          <input type="text" placeholder="Buscar por nombre, talla, etiqueta…" value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 140 }} />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ width: 'auto' }}>
-            <option value="">Estado</option>
-            <option>Disponible</option>
-            <option>Vendido</option>
-            <option>Reservado</option>
-          </select>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'grid' ? 700 : 400 }} onClick={() => setView('grid')}>⊞</button>
-            <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'table' ? 700 : 400 }} onClick={() => setView('table')}>☰</button>
-          </div>
+      {/* Global KPIs */}
+      {bundles.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginBottom: 16 }}>
+          {[
+            ['Invertido', `Bs. ${summaryTotals.invested.toFixed(0)}`, '#c62828'],
+            ['Ingresos', `Bs. ${summaryTotals.revenue.toFixed(0)}`, '#2e7d32'],
+            ['Ganancia', `${summaryTotals.profit >= 0 ? '+' : ''}Bs. ${summaryTotals.profit.toFixed(0)}`, summaryTotals.profit >= 0 ? '#2e7d32' : '#c62828'],
+            ['Descuentos', `− Bs. ${summaryTotals.discounts.toFixed(0)}`, '#e65100'],
+          ].map(([label, val, color]) => (
+            <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px 12px', borderTop: `3px solid ${color}` }}>
+              <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color }}>{val}</div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Modals */}
-      <PosterModal product={posterProduct} onClose={closePoster} />
-      <ShareModal  product={shareProduct}  onClose={closeShare} />
-      <SellModal   product={sellProduct}   onClose={closeSell} onSold={handleSold} />
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: '#1a1209' }}>
+          Lotes de inventario
+        </div>
+        <button onClick={() => { setShowCreate(true); setEditingBundle(null) }} className="btn btn-primary" style={{ fontSize: 12 }}>
+          + Nuevo lote
+        </button>
+      </div>
 
-      {/* Content */}
-      {activeTab === 'bundles' ? (
-        <BundleManager />
-      ) : loading ? (
+      {showCreate && (
+        <BundleForm onSave={handleCreate} onCancel={() => setShowCreate(false)} />
+      )}
+
+      {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
+      ) : bundles.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 48, color: '#9e8a6a' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: '#1a1209', marginBottom: 6 }}>Sin lotes registrados</div>
+          <div style={{ fontSize: 13 }}>Crea tu primer lote para empezar a trackear rentabilidad</div>
+        </div>
       ) : (
-        <>
-          <div style={{ padding: '8px 16px', fontSize: 12, color: '#9e8a6a' }}>
-            {`${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {bundles.map(b => {
+            const bs      = BUNDLE_STATUS[b.status] || BUNDLE_STATUS.active
+            const pct     = b.total_quantity > 0 ? Math.round((b.units_sold || 0) / b.total_quantity * 100) : 0
+            const isEditing = editingBundle?.id === b.id
 
-          {filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>📦</div>
-              <div style={{ fontFamily: "'Playfair Display', serif" }}>No hay productos aquí</div>
-              <Link to="/admin/upload" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex', textDecoration: 'none' }}>
-                + Agregar producto
-              </Link>
-            </div>
-          ) : view === 'grid' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, padding: 16 }}>
-              {filtered.map(p => {
-                const s = swipeStats[p.id]
-                return (
-                  <div key={p.id} style={{ position: 'relative' }}>
-                    <ProductCard product={p} admin onStatusChange={handleStatusChange} />
-                    {s && (s.likes > 0 || s.skips > 0 || s.wa_requests > 0) && (
-                      <div style={{ display: 'flex', gap: 6, padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', fontSize: 11 }}>
-                        <span style={{ color: '#2e7d32' }}>♥ {s.likes || 0}</span>
-                        <span style={{ color: '#9e8a6a' }}>✕ {s.skips || 0}</span>
-                        {s.wa_requests > 0 && <span style={{ color: '#1565c0' }}>💬 {s.wa_requests}</span>}
-                        {s.likes > 0 && <span style={{ color: '#9e8a6a', marginLeft: 'auto' }}>{Math.round((s.likes / ((s.likes || 0) + (s.skips || 0))) * 100)}%</span>}
-                      </div>
-                    )}
-                    <div style={{ padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', display: 'flex', gap: 6 }}>
-                      <button onClick={() => openShare(p)} style={{ flex: 1, padding: '6px', borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                        📤
-                      </button>
-                      <button onClick={() => openPoster(p)} style={{ flex: 1, padding: '6px', borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                        🖼️
-                      </button>
+            if (isEditing) return (
+              <BundleForm
+                key={b.id}
+                bundle={editingBundle}
+                onSave={payload => handleUpdate(b.id, payload)}
+                onCancel={() => setEditingBundle(null)}
+              />
+            )
+
+            return (
+              <div key={b.id} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 12, overflow: 'hidden' }}>
+                {/* Top row */}
+                <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 15, color: '#1a1209' }}>{b.name}</div>
+                      <span className="badge" style={{ background: bs.bg, color: bs.color }}>{bs.label}</span>
                     </div>
+                    {b.source && <div style={{ fontSize: 12, color: '#9e8a6a', marginTop: 2 }}>{b.source}</div>}
                   </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto', padding: '0 16px 16px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 8, overflow: 'hidden', border: '1px solid #e8e0d4' }}>
-                <thead>
-                  <tr style={{ background: '#1a1209', color: '#f5e6c8' }}>
-                    {['Producto','Lote','Talla','Precio','Venta','Dto','Ingreso','Días','Estado','♥','Acciones'].map(h => (
-                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, letterSpacing: 0.5, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((p, i) => {
-                    const days     = daysSince(p.created_at)
-                    const dotColor = days > 60 ? '#c62828' : days > 30 ? '#e65100' : '#2e7d32'
-                    const st       = STATUS_STYLES[p.status] || STATUS_STYLES.Disponible
-                    const sw       = swipeStats[p.id]
-                    const hasDiscount = p.discount && p.discount > 0
-                    return (
-                      <tr key={p.id} style={{ background: i % 2 === 0 ? '#fff' : '#faf8f5', borderBottom: '1px solid #e8e0d4' }}>
-                        <td style={{ padding: '9px 12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {p.photo_url
-                              ? <img src={p.photo_url} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4 }} />
-                              : <div style={{ width: 32, height: 32, background: '#f0ede8', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👕</div>
-                            }
-                            <Link to={`/admin/upload/${p.id}`} style={{ fontWeight: 600, color: '#1a1209', textDecoration: 'none', fontSize: 13 }}>
-                              {p.name}
-                            </Link>
-                          </div>
-                        </td>
-                        <td style={{ padding: '9px 12px', fontSize: 11, color: '#9e8a6a' }}>{p.bundle_label || '—'}</td>
-                        <td style={{ padding: '9px 12px', color: '#9e8a6a' }}>{p.size}</td>
-                        <td style={{ padding: '9px 12px', fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Bs. {p.price}</td>
-                        <td style={{ padding: '9px 12px' }}>
-                          {p.sold_price
-                            ? <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: p.sold_price < p.price ? '#c62828' : '#2e7d32' }}>Bs. {p.sold_price}</span>
-                            : <span style={{ color: '#c4b9a8' }}>—</span>
-                          }
-                        </td>
-                        <td style={{ padding: '9px 12px' }}>
-                          {hasDiscount
-                            ? <span style={{ color: '#e65100', fontWeight: 600 }}>− {p.discount}</span>
-                            : <span style={{ color: '#c4b9a8' }}>—</span>
-                          }
-                        </td>
-                        <td style={{ padding: '9px 12px', fontWeight: 600, color: '#2e7d32' }}>
-                          {p.sold_price ? `Bs. ${p.sold_price}` : '—'}
-                        </td>
-                        <td style={{ padding: '9px 12px' }}>
-                          <span style={{ fontSize: 12, color: dotColor, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span className="age-dot" style={{ background: dotColor }} />
-                            {days === 0 ? 'Hoy' : `${days}d`}
-                          </span>
-                        </td>
-                        <td style={{ padding: '9px 12px' }}>
-                          <span className="badge" style={{ background: st.bg, color: st.color }}>{p.status}</span>
-                        </td>
-                        <td style={{ padding: '9px 12px', color: '#2e7d32', fontWeight: 600 }}>{sw?.likes || 0}</td>
-                        <td style={{ padding: '9px 12px' }}>
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {p.status !== 'Disponible' && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#2e7d32' }} onClick={() => handleStatusChange(p.id, 'Disponible')}>Disponible</button>}
-                            {p.status !== 'Vendido'    && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828' }} onClick={() => openSell(p)}>Vendido</button>}
-                            {p.status !== 'Reservado'  && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#e65100' }} onClick={() => handleStatusChange(p.id, 'Reservado')}>Reservar</button>}
-                            <button className="btn" style={{ fontSize: 11, padding: '3px 7px' }} onClick={() => openShare(p)}>📤</button>
-                            <button className="btn" style={{ fontSize: 11, padding: '3px 7px' }} onClick={() => openPoster(p)}>🖼️</button>
-                            <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828', borderColor: '#ffcdd2' }} onClick={() => handleDelete(p.id, p.name, p.size, p.name)}>✕</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button onClick={() => setDetailId(b.id)} className="btn" style={{ fontSize: 11, padding: '4px 8px' }}>Ver</button>
+                    <button onClick={() => { setEditingBundle(b); setShowCreate(false) }} className="btn" style={{ fontSize: 11, padding: '4px 8px' }}>Editar</button>
+                    <button onClick={() => handleDelete(b)} className="btn" style={{ fontSize: 11, padding: '4px 8px', color: '#c62828', borderColor: '#ffcdd2' }}>✕</button>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ padding: '0 16px 8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9e8a6a', marginBottom: 4 }}>
+                    <span>{b.units_sold || 0} vendidas · {b.units_reserved || 0} reservadas · {b.units_remaining || 0} disponibles</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div style={{ background: '#f0ede8', borderRadius: 3, height: 6, display: 'flex', overflow: 'hidden' }}>
+                    <div style={{ width: `${b.total_quantity > 0 ? (b.units_sold || 0) / b.total_quantity * 100 : 0}%`, background: '#2e7d32', transition: 'width 0.4s' }} />
+                    <div style={{ width: `${b.total_quantity > 0 ? (b.units_reserved || 0) / b.total_quantity * 100 : 0}%`, background: '#ffb74d', transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+
+                {/* Financials */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 0, borderTop: '1px solid #f0ede8' }}>
+                  {[
+                    ['Invertido', `Bs. ${(b.total_cost || 0).toFixed(0)}`, '#9e8a6a'],
+                    ['Ingresos', `Bs. ${(b.total_revenue || 0).toFixed(0)}`, '#2e7d32'],
+                    ['Ganancia', `${(b.gross_profit || 0) >= 0 ? '+' : ''}${(b.gross_profit || 0).toFixed(0)}`, (b.gross_profit || 0) >= 0 ? '#2e7d32' : '#c62828'],
+                    ['Margen', `${(b.profit_margin_percent || 0).toFixed(1)}%`, (b.profit_margin_percent || 0) >= 0 ? '#1a1209' : '#c62828'],
+                  ].map(([label, val, color], i) => (
+                    <div key={label} style={{ padding: '10px 12px', borderRight: i < 3 ? '1px solid #f0ede8' : 'none' }}>
+                      <div style={{ fontSize: 10, color: '#9e8a6a', marginBottom: 3 }}>{label}</div>
+                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 13, color }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
+}
+
+const lbl = {
+  fontSize: 11, color: '#9e8a6a', display: 'block',
+  marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1
 }
