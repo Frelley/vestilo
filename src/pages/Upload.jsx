@@ -5,8 +5,11 @@ import { SIZES, COLORS, COLOR_DOTS } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
 
-const EMPTY = { name: '', size: '', color: [], price: '', notes: '', bundle_id: '', bundle_label: '' }
 const MAX_PHOTOS = 4
+const LAST_BUNDLE_KEY = 'vestilo-last-bundle'
+function getLastBundle() { try { return localStorage.getItem(LAST_BUNDLE_KEY) || '' } catch { return '' } }
+function saveLastBundle(id) { try { if (id) localStorage.setItem(LAST_BUNDLE_KEY, id) } catch {} }
+const EMPTY = () => ({ name: '', size: '', color: [], price: '', notes: '', bundle_id: getLastBundle(), bundle_label: '' })
 
 export default function Upload() {
   const { id }     = useParams()
@@ -14,7 +17,7 @@ export default function Upload() {
   const isEdit     = Boolean(id)
   const { toast, show } = useToast()
 
-  const [form, setForm]       = useState(EMPTY)
+  const [form, setForm]       = useState(EMPTY())
   const [photos, setPhotos]   = useState([])
   const [activePhoto, setActivePhoto] = useState(0)
   const [saving, setSaving]   = useState(false)
@@ -92,6 +95,7 @@ export default function Upload() {
   }
 
   function handleBundleChange(bundleId) {
+    saveLastBundle(bundleId)
     setForm(f => ({ ...f, bundle_id: bundleId, bundle_label: '' }))
   }
 
