@@ -1,35 +1,46 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { supabase, addProduct, updateProduct, uploadPhoto, deleteProduct, getNextLabelForSize } from '../lib/supabase.js'
+import { supabase, addProduct, updateProduct, uploadPhoto, deleteProduct, getNextLabelForSize, freeLabel, getBundles, getNextBundleLabel } from '../lib/supabase.js'
 import { SIZES, COLORS, COLOR_DOTS } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
 
-const EMPTY = { name: '', size: '', color: [], price: '', notes: '' }
+const EMPTY = { name: '', size: '', color: [], price: '', notes: '', bundle_id: '', bundle_label: '' }
 const MAX_PHOTOS = 4
 
 export default function Upload() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const isEdit = Boolean(id)
+  const { id }     = useParams()
+  const navigate   = useNavigate()
+  const isEdit     = Boolean(id)
   const { toast, show } = useToast()
 
-  const [form, setForm] = useState(EMPTY)
-  const [photos, setPhotos] = useState([])
+  const [form, setForm]       = useState(EMPTY)
+  const [photos, setPhotos]   = useState([])
   const [activePhoto, setActivePhoto] = useState(0)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]   = useState(false)
   const [loading, setLoading] = useState(isEdit)
+  const [bundles, setBundles] = useState([])
 
+  // Load active bundles for the dropdown
+  useEffect(() => {
+    getBundles({ status: 'active' }).then(({ data }) => {
+      if (data) setBundles(data)
+    })
+  }, [])
+
+  // Load existing product for edit
   useEffect(() => {
     if (!isEdit) return
     supabase.from('products').select('*').eq('id', id).single().then(({ data }) => {
       if (data) {
         setForm({
-          name:   data.name   || '',
-          size:   data.size   || '',
-          color:  Array.isArray(data.color) ? data.color : data.color ? [data.color] : [],
-          price:  data.price  || '',
-          notes:  data.notes  || '',
+          name:         data.name         || '',
+          size:         data.size         || '',
+          color:        Array.isArray(data.color) ? data.color : data.color ? [data.color] : [],
+          price:        data.price        || '',
+          notes:        data.notes        || '',
+          bundle_id:    data.bundle_id    || '',
+          bundle_label: data.bundle_label || '',
         })
         const existing = data.photos?.length
           ? data.photos.map(url => ({ file: null, preview: url, existing_url: url }))
@@ -43,7 +54,7 @@ export default function Upload() {
   }, [id, isEdit])
 
   function handlePhotoAdd(e) {
-    const files = Array.from(e.target.files)
+    const files     = Array.from(e.target.files)
     const remaining = MAX_PHOTOS - photos.length
     if (remaining <= 0) { show(`Máximo ${MAX_PHOTOS} fotos`, 'error'); return }
     const toAdd = files.slice(0, remaining)
@@ -80,6 +91,18 @@ export default function Upload() {
     }
   }
 
+  // When bundle changes, auto-generate a bundle label
+  async function handleBundleChange(bundleId) {
+    setForm(f => ({ ...f, bundle_id: bundleId, bundle_label: '' }))
+    if (!bundleId) return
+
+    const selectedBundle = bundles.find(b => b.id === bundleId)
+    if (selectedBundle?.prefix) {
+      const label = await getNextBundleLabel(selectedBundle.prefix)
+      setForm(f => ({ ...f, bundle_id: bundleId, bundle_label: label }))
+    }
+  }
+
   function handlePriceBlur() {
     const raw = parseFloat(form.price)
     if (isNaN(raw) || raw <= 0) return
@@ -113,12 +136,18 @@ export default function Upload() {
       const photo_url = uploadedUrls[0] || null
       const photoData = { photo_url, photos: uploadedUrls }
 
+      const bundleData = {
+        bundle_id:    form.bundle_id    || null,
+        bundle_label: form.bundle_label || null,
+      }
+
       if (isEdit) {
-        await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData })
+        await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData, ...bundleData })
         show('Producto actualizado')
       } else {
         const { data: newProduct, error } = await addProduct({
-          ...form, price: parseFloat(form.price), status: 'Disponible', photo_url: null, photos: [],
+          ...form, price: parseFloat(form.price), status: 'Disponible',
+          photo_url: null, photos: [], ...bundleData,
         })
         if (error) throw error
         const finalUrls = await Promise.all(
@@ -138,6 +167,10 @@ export default function Upload() {
 
   async function handleDelete() {
     if (!confirm(`¿Eliminar este producto? Esta acción no se puede deshacer.`)) return
+    // Free the label so it can be reused
+    if (form.size && form.name) {
+      await freeLabel(form.size, form.name)
+    }
     await deleteProduct(id)
     show('Eliminado')
     setTimeout(() => navigate('/admin'), 600)
@@ -151,6 +184,7 @@ export default function Upload() {
   )
 
   const mainPhoto = photos[activePhoto]?.preview || null
+  const selectedBundle = bundles.find(b => b.id === form.bundle_id)
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
@@ -199,7 +233,6 @@ export default function Upload() {
                   position: 'absolute', top: -6, right: -6, width: 18, height: 18,
                   borderRadius: '50%', background: '#c62828', color: '#fff', border: 'none',
                   fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  lineHeight: 1
                 }}>✕</button>
                 {i > 0 && (
                   <button onClick={() => movePhoto(i, i - 1)} style={{
@@ -244,33 +277,79 @@ export default function Upload() {
               </div>
               <div>
                 <label style={lblStyle}>Precio (Bs.) *</label>
-                <input type="number" placeholder="120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} onBlur={handlePriceBlur} />
+                <input type="number" placeholder="120" value={form.price}
+                  onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                  onBlur={handlePriceBlur} />
               </div>
             </div>
+
             <div>
               <label style={lblStyle}>
-                Nombre / descripción *
-                {!isEdit && form.size && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado al elegir talla</span>}
+                Nombre / etiqueta *
+                {!isEdit && form.size && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado</span>}
               </label>
               <input placeholder="Ej: M-001" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
+
             <div>
               <label style={lblStyle}>Notas internas</label>
-              <textarea placeholder="Notas sobre el producto (solo visible para el equipo)..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ resize: 'vertical' }} />
+              <textarea placeholder="Notas sobre el producto (solo visible para el equipo)..."
+                value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                rows={2} style={{ resize: 'vertical' }} />
             </div>
           </div>
         </div>
 
+        {/* Bundle assignment */}
+        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+          <label style={lblStyle}>Lote de inventario</label>
+          {bundles.length === 0 ? (
+            <div style={{ fontSize: 13, color: '#9e8a6a', padding: '8px 0' }}>
+              No hay lotes activos. <Link to="/admin" style={{ color: '#1a1209' }}>Crea uno en la pestaña Lotes →</Link>
+            </div>
+          ) : (
+            <select value={form.bundle_id} onChange={e => handleBundleChange(e.target.value)}>
+              <option value="">Sin asignar a lote</option>
+              {bundles.map(b => (
+                <option key={b.id} value={b.id}>{b.name} — Bs. {b.cost_per_unit}/u</option>
+              ))}
+            </select>
+          )}
+
+          {form.bundle_id && (
+            <div style={{ marginTop: 10 }}>
+              <label style={lblStyle}>
+                Etiqueta en el lote
+                {selectedBundle?.prefix && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado</span>}
+              </label>
+              <input
+                value={form.bundle_label}
+                onChange={e => setForm(f => ({ ...f, bundle_label: e.target.value }))}
+                placeholder={selectedBundle?.prefix ? `${selectedBundle.prefix}-001` : 'Etiqueta de lote'}
+              />
+              {selectedBundle && (
+                <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 5 }}>
+                  Costo del lote: <strong>Bs. {selectedBundle.cost_per_unit}</strong> por prenda · {selectedBundle.units_remaining ?? '—'} disponibles
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Color */}
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <label style={lblStyle}>Color * {form.color.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}>— {form.color.join(', ')}</span>}</label>
+          <label style={lblStyle}>
+            Color *{form.color.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}> — {form.color.join(', ')}</span>}
+          </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {COLORS.map(c => (
               <button key={c} type="button" onClick={() => toggleColor(c)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 99,
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 99,
                   border: form.color.includes(c) ? '2px solid #1a1209' : '1px solid #e8e0d4',
                   background: form.color.includes(c) ? '#1a1209' : 'transparent',
-                  color: form.color.includes(c) ? '#f5e6c8' : '#9e8a6a', fontSize: 12, cursor: 'pointer' }}>
+                  color: form.color.includes(c) ? '#f5e6c8' : '#9e8a6a', fontSize: 12, cursor: 'pointer'
+                }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
                 {c}
               </button>
