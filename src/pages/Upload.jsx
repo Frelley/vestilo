@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { supabase, addProduct, updateProduct, uploadPhoto, deleteProduct, getNextLabelForSize, freeLabel, getBundles, getNextBundleLabel } from '../lib/supabase.js'
+import { supabase, addProduct, updateProduct, uploadPhoto, deleteProduct, getNextLabelForSize, freeLabel, getBundles } from '../lib/supabase.js'
 import { SIZES, COLORS, COLOR_DOTS } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import { Toast, useToast } from '../components/Toast.jsx'
@@ -14,7 +14,7 @@ export default function Upload() {
   const isEdit     = Boolean(id)
   const { toast, show } = useToast()
 
-  const [form, setForm]       = useState(EMPTY)h
+  const [form, setForm]       = useState(EMPTY)
   const [photos, setPhotos]   = useState([])
   const [activePhoto, setActivePhoto] = useState(0)
   const [saving, setSaving]   = useState(false)
@@ -91,16 +91,8 @@ export default function Upload() {
     }
   }
 
-  // When bundle changes, auto-generate a bundle label
-  async function handleBundleChange(bundleId) {
+  function handleBundleChange(bundleId) {
     setForm(f => ({ ...f, bundle_id: bundleId, bundle_label: '' }))
-    if (!bundleId) return
-
-    const selectedBundle = bundles.find(b => b.id === bundleId)
-    if (selectedBundle?.prefix) {
-      const label = await getNextBundleLabel(selectedBundle.prefix)
-      setForm(f => ({ ...f, bundle_id: bundleId, bundle_label: label }))
-    }
   }
 
   function handlePriceBlur() {
@@ -317,10 +309,10 @@ export default function Upload() {
           )}
 
           {form.bundle_id && selectedBundle && (
-          <div style={{ marginTop: 10, fontSize: 11, color: '#9e8a6a' }}>
-            Costo del lote: <strong style={{ color: '#1a1209' }}>Bs. {selectedBundle.cost_per_unit}</strong> por prenda · {selectedBundle.units_remaining ?? '—'} disponibles
-          </div>
-        )}
+            <div style={{ marginTop: 10, fontSize: 11, color: '#9e8a6a' }}>
+              Costo del lote: <strong style={{ color: '#1a1209' }}>Bs. {selectedBundle.cost_per_unit}</strong> por prenda · {selectedBundle.units_remaining ?? '—'} disponibles
+            </div>
+          )}
         </div>
 
         {/* Color */}
