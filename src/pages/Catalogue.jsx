@@ -65,9 +65,6 @@ function ModePicker({ onPick }) {
           </button>
         ))}
       </div>
-      {showOnboarding && (
-        <OnboardingTooltip onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
-      )}
     </div>
   )
 }
