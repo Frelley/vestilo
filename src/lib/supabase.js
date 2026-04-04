@@ -45,7 +45,6 @@ export async function deleteProduct(id) {
 }
 
 // ─── Mark as sold — captures actual sale price + discount ────────────────────
-// Call this instead of updateProduct when marking Vendido
 export async function markSold(id, { sold_price, discount = 0 }) {
   return supabase.from('products').update({
     status: 'Vendido',
@@ -104,47 +103,42 @@ export async function getProductsSorted(filters = {}) {
   return { data: result, error: null }
 }
 
-// ─── Auto-label with recycling ────────────────────────────────────────────────
-// 1. Check freed_labels first (recycled from sold/deleted products)
-// 2. Fall back to max+1 from existing products
-export async function getNextLabelForSize(size) {
-  if (!size) return ''
-
-  // Check freed labels first
+// ─── Auto-label — global numeric sequence: 001, 002, 003... ──────────────────
+// Ignores old "SIZE-NNN" format labels entirely (start fresh).
+// 1. Check freed_labels pool first
+// 2. Fall back to max numeric label + 1
+export async function getNextLabelForSize(_size) {
+  // Check freed labels first (oldest first)
   const { data: freed } = await supabase
     .from('freed_labels')
     .select('id, label')
-    .eq('size', size)
     .order('created_at', { ascending: true })
     .limit(1)
 
-  if (freed?.length > 0) {
-    // Claim this freed label by deleting it
+  if (freed?.length > 0 && /^\d+$/.test(freed[0].label)) {
     await supabase.from('freed_labels').delete().eq('id', freed[0].id)
     return freed[0].label
   }
 
-  // No freed labels — find next sequential number
-  const prefix = `${size}-`
-  const { data } = await supabase
-    .from('products')
-    .select('name')
-    .like('name', `${prefix}%`)
+  // Find highest purely-numeric label across all products
+  const { data } = await supabase.from('products').select('name')
 
   let max = 0
   ;(data || []).forEach(({ name }) => {
-    const num = parseInt(name.replace(prefix, ''), 10)
-    if (!isNaN(num) && num > max) max = num
+    if (/^\d+$/.test(name)) {
+      const n = parseInt(name, 10)
+      if (n > max) max = n
+    }
   })
 
-  const next = String(max + 1).padStart(3, '0')
-  return `${prefix}${next}`
+  return String(max + 1).padStart(3, '0')
 }
 
-// Free a label back into the pool (call when a product is deleted or re-listed)
+// ─── Free a label back into the pool ─────────────────────────────────────────
+// Only recycles new numeric labels — old "M-001" style are silently ignored.
 export async function freeLabel(size, label) {
-  if (!size || !label) return
-  // Check it's not already in the freed pool
+  if (!label || !/^\d+$/.test(label)) return
+
   const { data } = await supabase
     .from('freed_labels')
     .select('id')
@@ -157,8 +151,6 @@ export async function freeLabel(size, label) {
 }
 
 // ─── Bulk re-compress existing photos ────────────────────────────────────────
-// Fetches each photo URL, compresses it, re-uploads, and updates the DB row.
-// onProgress(current, total, productName) is called after each product.
 export async function recompressAllPhotos(onProgress) {
   const { data: products, error } = await supabase
     .from('products')
@@ -209,8 +201,6 @@ export async function recompressAllPhotos(onProgress) {
 }
 
 // ─── Image compression ────────────────────────────────────────────────────────
-// Resizes to max 1200px on the longest side and encodes as JPEG @ 80% quality.
-// Returns a Blob ready for upload.
 export function compressImage(file, { maxPx = 1200, quality = 0.8 } = {}) {
   return new Promise((resolve, reject) => {
     const img = new Image()
