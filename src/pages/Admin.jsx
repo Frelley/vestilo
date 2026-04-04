@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getProducts, updateProduct, deleteProduct, freeLabel, supabase, recompressAllPhotos } from '../lib/supabase.js'
+import { getProducts, updateProduct, deleteProduct, freeLabel, supabase } from '../lib/supabase.js'
 import { STATUS_STYLES, daysSince, formatDate, colorsArray } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import ProductCard from '../components/ProductCard.jsx'
@@ -24,27 +24,6 @@ export default function Admin() {
   const { shareProduct, open: openShare, close: closeShare }   = useShareModal()
   const { sellProduct, open: openSell, close: closeSell }      = useSellModal()
 
-  const [recompressing, setRecompressing] = useState(false)
-  const [recompressProgress, setRecompressProgress] = useState(null) // { done, total, name }
-
-  async function handleRecompressAll() {
-    if (!confirm('¿Comprimir todas las fotos existentes? Esto puede tardar varios minutos.')) return
-    setRecompressing(true)
-    setRecompressProgress({ done: 0, total: 0, name: '' })
-    try {
-      const total = await recompressAllPhotos((done, total, name) => {
-        setRecompressProgress({ done, total, name })
-      })
-      show(`✓ ${total} producto${total !== 1 ? 's' : ''} comprimidos`)
-      load() // refresh photos in view
-    } catch (err) {
-      console.error(err)
-      show('Error al comprimir fotos', 'error')
-    } finally {
-      setRecompressing(false)
-      setRecompressProgress(null)
-    }
-  }
 
   useEffect(() => { load() }, [])
 
@@ -151,40 +130,6 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* Re-compress banner */}
-      <div style={{ margin: '0 16px 8px', background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 180 }}>
-          {recompressProgress ? (
-            <>
-              <div style={{ fontSize: 12, color: '#1a1209', fontWeight: 600, marginBottom: 5 }}>
-                Comprimiendo… {recompressProgress.done}/{recompressProgress.total}
-                {recompressProgress.name ? ` — ${recompressProgress.name}` : ''}
-              </div>
-              <div style={{ height: 6, background: '#f0ede8', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: 3, background: '#1a1209',
-                  width: recompressProgress.total > 0
-                    ? `${Math.round((recompressProgress.done / recompressProgress.total) * 100)}%`
-                    : '0%',
-                  transition: 'width 0.3s ease',
-                }} />
-              </div>
-            </>
-          ) : (
-            <div style={{ fontSize: 12, color: '#9e8a6a' }}>
-              🗜️ <strong style={{ color: '#1a1209' }}>Comprimir fotos existentes</strong> — reduce el tamaño de todas las fotos guardadas
-            </div>
-          )}
-        </div>
-        <button
-          onClick={handleRecompressAll}
-          disabled={recompressing}
-          className="btn btn-primary"
-          style={{ fontSize: 12, padding: '7px 14px', opacity: recompressing ? 0.6 : 1, whiteSpace: 'nowrap' }}
-        >
-          {recompressing ? 'Procesando…' : 'Comprimir todo'}
-        </button>
-      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, padding: '0 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', overflowX: 'auto' }}>
