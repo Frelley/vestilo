@@ -1,5 +1,31 @@
 import { Link } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
 import { STATUS_STYLES, COLOR_DOTS, colorsArray, daysSince } from '../lib/constants.js'
+
+function LazyImage({ src, alt, style }) {
+  const [loaded, setLoaded] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!src) return
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setLoaded(true); obs.disconnect() } },
+      { rootMargin: '200vh' }  // start loading 2 screens before visible
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [src])
+
+  return (
+    <div ref={ref} style={{ ...style, background: '#f0ede8', overflow: 'hidden' }}>
+      {loaded && (
+        <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      )}
+    </div>
+  )
+}
 
 export default function ProductCard({ product, admin = false, onStatusChange }) {
   const days = daysSince(product.created_at)
@@ -11,11 +37,10 @@ export default function ProductCard({ product, admin = false, onStatusChange }) 
     <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
       <Link to={admin ? `/admin/upload/${product.id}` : `/p/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
         {product.photo_url ? (
-          <img
+          <LazyImage
             src={product.photo_url}
             alt={product.name}
-            style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }}
-            loading="lazy"
+            style={{ width: '100%', height: 200 }}
           />
         ) : (
           <div style={{
