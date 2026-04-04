@@ -12,7 +12,7 @@ function LazyImage({ src, alt, style }) {
     if (!el) return
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setLoaded(true); obs.disconnect() } },
-      { rootMargin: '200vh' }  // start loading 2 screens before visible
+      { rootMargin: '200%' }  // start loading 2 screens before visible
     )
     obs.observe(el)
     return () => obs.disconnect()
