@@ -241,15 +241,28 @@ export default function Upload() {
             ))}
 
             {photos.length < MAX_PHOTOS && (
-              <label style={{
-                width: 56, height: 56, borderRadius: 6, border: '1.5px dashed #c4b9a8',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', background: '#faf8f5', flexShrink: 0, gap: 2
-              }}>
-                <span style={{ fontSize: 18, color: '#9e8a6a' }}>+</span>
-                <span style={{ fontSize: 9, color: '#c4b9a8' }}>{photos.length}/{MAX_PHOTOS}</span>
-                <input type="file" accept="image/*" multiple onChange={handlePhotoAdd} style={{ display: 'none' }} />
-              </label>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                {/* Camera — opens rear camera directly on both iOS and Android */}
+                <label style={{
+                  width: 56, height: 56, borderRadius: 6, border: '1.5px dashed #c4b9a8',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', background: '#faf8f5', gap: 2
+                }}>
+                  <span style={{ fontSize: 16, color: '#9e8a6a' }}>📷</span>
+                  <span style={{ fontSize: 8, color: '#c4b9a8' }}>Cámara</span>
+                  <input type="file" accept="image/*" capture="environment" onChange={handlePhotoAdd} style={{ display: 'none' }} />
+                </label>
+                {/* Gallery — opens file picker / gallery */}
+                <label style={{
+                  width: 56, height: 56, borderRadius: 6, border: '1.5px dashed #c4b9a8',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', background: '#faf8f5', gap: 2
+                }}>
+                  <span style={{ fontSize: 16, color: '#9e8a6a' }}>🖼️</span>
+                  <span style={{ fontSize: 8, color: '#c4b9a8' }}>{photos.length}/{MAX_PHOTOS}</span>
+                  <input type="file" accept="image/*" multiple onChange={handlePhotoAdd} style={{ display: 'none' }} />
+                </label>
+              </div>
             )}
           </div>
 
