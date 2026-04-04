@@ -156,14 +156,91 @@ export async function freeLabel(size, label) {
   }
 }
 
+// ─── Bulk re-compress existing photos ────────────────────────────────────────
+// Fetches each photo URL, compresses it, re-uploads, and updates the DB row.
+// onProgress(current, total, productName) is called after each product.
+export async function recompressAllPhotos(onProgress) {
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('id, name, photo_url, photos')
+
+  if (error) throw error
+
+  const list = (products || []).filter(p => p.photo_url || p.photos?.length)
+  let done = 0
+
+  for (const product of list) {
+    try {
+      const urls = []
+      if (product.photos?.length) {
+        product.photos.forEach(u => { if (u && !urls.includes(u)) urls.push(u) })
+      } else if (product.photo_url) {
+        urls.push(product.photo_url)
+      }
+
+      const newUrls = await Promise.all(urls.map(async url => {
+        const res = await fetch(url)
+        if (!res.ok) return url
+        const blob = await res.blob()
+        const file = new File([blob], 'photo.jpg', { type: blob.type || 'image/jpeg' })
+        const compressed = await compressImage(file)
+        const path = `products/${product.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+        const { error: upErr } = await supabase.storage
+          .from('product-photos')
+          .upload(path, compressed, { upsert: true, contentType: 'image/jpeg' })
+        if (upErr) return url
+        const { data } = supabase.storage.from('product-photos').getPublicUrl(path)
+        return data.publicUrl
+      }))
+
+      await updateProduct(product.id, {
+        photo_url: newUrls[0] || null,
+        photos: newUrls,
+      })
+    } catch {
+      // skip silently, don't abort batch
+    }
+
+    done++
+    onProgress?.(done, list.length, product.name)
+  }
+
+  return list.length
+}
+
+// ─── Image compression ────────────────────────────────────────────────────────
+// Resizes to max 1200px on the longest side and encodes as JPEG @ 80% quality.
+// Returns a Blob ready for upload.
+export function compressImage(file, { maxPx = 1200, quality = 0.8 } = {}) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width >= height) { height = Math.round(height * maxPx / width); width = maxPx }
+        else                 { width  = Math.round(width  * maxPx / height); height = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')), 'image/jpeg', quality)
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 // ─── Photo upload ─────────────────────────────────────────────────────────────
 export async function uploadPhoto(file, productId) {
-  const ext = file.name.split('.').pop()
-  const path = `products/${productId}-${Date.now()}.${ext}`
+  const compressed = await compressImage(file)
+  const path = `products/${productId}-${Date.now()}.jpg`
 
   const { error } = await supabase.storage
     .from('product-photos')
-    .upload(path, file, { upsert: true })
+    .upload(path, compressed, { upsert: true, contentType: 'image/jpeg' })
 
   if (error) throw error
 
