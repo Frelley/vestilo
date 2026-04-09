@@ -69,10 +69,24 @@ function ModePicker({ onPick }) {
   )
 }
 
-function OnboardingTooltip({ onDismiss }) {
+function OnboardingTooltip({ mode, onDismiss }) {
+  const swipeTips = [
+    { icon: '♥', label: 'Guardá lo que te gusta', desc: 'Deslizá a la derecha o tocá ♥ para guardar una prenda en tus favoritos.' },
+    { icon: '📸', label: 'Mirá todas las fotos', desc: 'Tocá la tarjeta para ver más fotos de la misma prenda.' },
+    { icon: '🔍', label: 'Filtrá por talla o precio', desc: 'Usá el botón "Filtros" arriba para ver solo lo que te queda.' },
+    { icon: '🛍️', label: 'Armá tu pedido', desc: 'Tus favoritas se acumulan en el 🤍. Cuando termines, pedí todo junto por WhatsApp.' },
+  ]
+  const gridTips = [
+    { icon: '🤍', label: 'Guardá lo que te gusta', desc: 'Tocá el 🤍 en cualquier prenda para agregarla a tus favoritos.' },
+    { icon: '🔍', label: 'Filtrá por talla o precio', desc: 'Usá los filtros arriba para encontrar rápido lo que buscás.' },
+    { icon: '📸', label: 'Mirá los detalles', desc: 'Tocá cualquier prenda para ver todas sus fotos y detalles.' },
+    { icon: '💬', label: 'Pedí por WhatsApp', desc: 'Guardá tus favoritas y enviá todo el pedido en un solo mensaje.' },
+  ]
+  const tips = mode === 'swipe' ? swipeTips : gridTips
+
   return (
     <>
-      <div onClick={onDismiss} style={{ position: 'fixed', inset: 0, zIndex: 300 }} />
+      <div onClick={onDismiss} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.4)' }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
         background: '#1a1209', borderTop: '1px solid #3d3020',
@@ -89,11 +103,7 @@ function OnboardingTooltip({ onDismiss }) {
           ¿Cómo funciona?
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-          {[
-            { icon: '♥', label: 'Guardá lo que te gusta', desc: 'Toca el corazón en swipe, o el 🤍 en catálogo para guardar prendas.' },
-            { icon: '🛍️', label: 'Armá tu pedido', desc: 'Tus favoritas se acumulan en una lista. Seleccioná las que querés comprar.' },
-            { icon: '💬', label: 'Pedí todo junto por WhatsApp', desc: 'Te conectamos directo con la tienda para cerrar todo en un mensaje.' },
-          ].map(({ icon, label, desc }) => (
+          {tips.map(({ icon, label, desc }) => (
             <div key={label} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#241810', border: '1px solid #3d3020', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{icon}</div>
               <div>
@@ -104,11 +114,11 @@ function OnboardingTooltip({ onDismiss }) {
           ))}
         </div>
         <button onClick={onDismiss} style={{
-          width: '100%', padding: '14px', borderRadius: 10,
+          width: '100%', padding: '13px', borderRadius: 10,
           background: '#f5e6c8', color: '#1a1209', border: 'none',
           fontSize: 14, fontWeight: 700, cursor: 'pointer',
         }}>
-          Entendido →
+          ¡Entendido, a explorar! →
         </button>
       </div>
     </>
@@ -116,66 +126,45 @@ function OnboardingTooltip({ onDismiss }) {
 }
 
 // ── Liked list ────────────────────────────────────────────────────────────────
-function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
-  const [selected, setSelected] = useState([])
-  const toggleSelect = id => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
-  function sendCart() {
-    const items = likedProducts.filter(p => selected.includes(p.id))
-    if (!items.length) return
-    const lines = items.map(p => `• ${p.name} — Talla ${p.size}, Bs. ${p.price}`).join('\n')
-    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas camisetas:\n\n${lines}\n\n¿Están disponibles?`)}`, '_blank')
-  }
+function LikedList({ likedProducts, onBack, onRemove }) {
+  const waText = likedProducts.map(p => `• ${p.name} — Talla ${p.size} — Bs. ${p.price}`).join('\n')
+  const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
+
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1209' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: '1px solid #3d3020' }}>
-        <button onClick={onBack} style={{ background: 'transparent', border: 'none', color: '#9e8a6a', fontSize: 20, cursor: 'pointer' }}>←</button>
-        <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700, flex: 1 }}>Mis favoritos</div>
-        <span style={{ fontSize: 12, color: '#9e8a6a' }}>{likedProducts.length} prenda{likedProducts.length !== 1 ? 's' : ''}</span>
+    <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 12px' }}>
+        <button onClick={onBack} style={{ background: 'transparent', border: 'none', color: '#9e8a6a', fontSize: 20, cursor: 'pointer', padding: 0 }}>←</button>
+        <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700 }}>Mis favoritas ({likedProducts.length})</div>
       </div>
-      {likedProducts.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🤍</div>
-          <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, marginBottom: 8 }}>Aún no tienes favoritos</div>
-          <div style={{ fontSize: 13, marginBottom: 24 }}>{emptyMsg}</div>
-          <button onClick={onBack} style={{ background: '#f5e6c8', color: '#1a1209', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Seguir explorando</button>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
+        {likedProducts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🤍</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, marginBottom: 8 }}>Todavía no guardaste nada</div>
+            <div style={{ fontSize: 13 }}>Deslizá a la derecha las camisetas que te gusten</div>
+          </div>
+        ) : likedProducts.map(p => {
+          const photo = getPhotos(p)[0]
+          return (
+            <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #3d3020' }}>
+              {photo ? <img src={photo} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                : <div style={{ width: 56, height: 56, background: '#241810', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>👕</div>}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 14, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: '#9e8a6a' }}>Talla {p.size}{p.color ? ` · ${Array.isArray(p.color) ? p.color.join(', ') : p.color}` : ''}</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 14, fontWeight: 700, marginTop: 2 }}>Bs. {p.price}</div>
+              </div>
+              <button onClick={() => onRemove(p.id)} style={{ background: 'transparent', border: 'none', color: '#9e8a6a', fontSize: 18, cursor: 'pointer', padding: 8 }}>✕</button>
+            </div>
+          )
+        })}
+      </div>
+      {likedProducts.length > 0 && (
+        <div style={{ padding: '16px 16px 36px' }}>
+          <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+            {WA_SVG} Pedir por WhatsApp ({likedProducts.length})
+          </a>
         </div>
-      ) : (
-        <>
-          <div style={{ padding: '10px 16px 4px', fontSize: 12, color: '#9e8a6a' }}>Selecciona las que quieres comprar</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, padding: '8px 16px 120px' }}>
-            {likedProducts.map(p => {
-              const isSel = selected.includes(p.id)
-              const ph = getPhotos(p)
-              const colors = colorsArray(p.color)
-              return (
-                <div key={p.id} onClick={() => toggleSelect(p.id)} style={{ background: isSel ? '#2d1f0e' : '#241810', border: `2px solid ${isSel ? '#f5e6c8' : '#3d3020'}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
-                  {ph[0] ? <img src={ph[0]} alt={p.name} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
-                    : <div style={{ height: 140, background: '#3d3020', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>👕</div>}
-                  {isSel && <div style={{ position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: '50%', background: '#f5e6c8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✓</div>}
-                  <div style={{ padding: '8px 10px 10px' }}>
-                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#f5e6c8', marginBottom: 2, lineHeight: 1.3 }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      Talla {p.size}
-                      {colors.map(c => <span key={c} style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block', flexShrink: 0 }} />)}
-                      {colors.length > 0 && <span>{colors.join(', ')}</span>}
-                    </div>
-                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#f5e6c8' }}>Bs. {p.price}</div>
-                    <button onClick={e => { e.stopPropagation(); onRemove(p.id); setSelected(s => s.filter(x => x !== p.id)) }}
-                      style={{ marginTop: 6, fontSize: 10, color: '#9e8a6a', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>Quitar</button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1a1209', borderTop: '1px solid #3d3020', padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <div style={{ fontSize: 13, color: '#9e8a6a', flex: 1 }}>{selected.length === 0 ? 'Selecciona prendas' : `${selected.length} seleccionada${selected.length !== 1 ? 's' : ''}`}</div>
-            <button onClick={() => setSelected(likedProducts.map(p => p.id))} style={{ fontSize: 12, color: '#9e8a6a', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '8px 12px', cursor: 'pointer' }}>Todas</button>
-            <button onClick={sendCart} disabled={selected.length === 0}
-              style={{ background: selected.length > 0 ? '#25D366' : '#3d3020', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: selected.length > 0 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 6 }}>
-              {WA_SVG} Pedir por WhatsApp
-            </button>
-          </div>
-        </>
       )}
     </div>
   )
@@ -185,60 +174,51 @@ function LikedList({ likedProducts, onBack, onRemove, emptyMsg }) {
 function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked }) {
   const navigate = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
-  if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={onRemoveLiked} emptyMsg="Toca el corazón en las prendas que te gusten" />
+  const likedCount = likedIds.length
+
+  if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={onRemoveLiked} />
+
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1209' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #3d3020' }}>
+    <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', position: 'sticky', top: 0, zIndex: 10 }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, fontWeight: 700 }}>Vestilo a tu sonso!</div>
-          <div style={{ color: '#9e8a6a', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#1a1209' }}>Vestilo a tu sonso!</div>
+          <div style={{ fontSize: 9, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={onSwitchMode} title="Modo swipe" style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>👆</button>
-          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button onClick={onSwitchMode} title="Modo swipe" style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>👆</button>
+          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ fontSize: 14 }}>🤍</span>
-            {likedIds.length > 0 && <span style={{ background: '#f5e6c8', color: '#1a1209', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedIds.length}</span>}
+            {likedCount > 0 && <span style={{ background: '#1a1209', color: '#f5e6c8', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
           </button>
         </div>
       </div>
       {filterBar}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, padding: '12px 12px 32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 12 }}>
         {products.map(p => {
-          const ph = getPhotos(p)
-          const isLiked = likedIds.includes(p.id)
-          const colors = colorsArray(p.color)
+          const photo = getPhotos(p)[0]
+          const liked = likedIds.includes(p.id)
           return (
-            <div key={p.id} onClick={() => navigate(`/p/${p.id}`)} style={{ background: '#241810', border: '1px solid #3d3020', borderRadius: 14, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}>
-              <div style={{ position: 'relative' }}>
-                {ph[0] ? <img src={ph[0]} alt={p.name} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ height: 180, background: '#3d3020', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>👕</div>}
-                <button onClick={e => { e.stopPropagation(); onToggleLike(p) }} style={{
-                  position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: '50%',
-                  background: isLiked ? '#f5e6c8' : 'rgba(26,18,9,0.6)', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
-                }}>{isLiked ? '❤️' : '🤍'}</button>
-              </div>
-              <div style={{ padding: '10px 10px 12px' }}>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#f5e6c8', marginBottom: 3, lineHeight: 1.3 }}>{p.name}</div>
-                <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                  <span>Talla {p.size}</span>
-                  {colors.map(c => (
-                    <span key={c} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ color: '#3d3020' }}>·</span>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block', flexShrink: 0 }} />
-                      <span>{c}</span>
-                    </span>
-                  ))}
+            <div key={p.id} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e0d4', position: 'relative' }}>
+              <div onClick={() => navigate(`/p/${p.id}`)} style={{ cursor: 'pointer' }}>
+                {photo ? <img src={photo} alt={p.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ aspectRatio: '3/4', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>👕</div>}
+                <div style={{ padding: '8px 10px 10px' }}>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#1a1209', marginBottom: 2 }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: '#9e8a6a' }}>Talla {p.size}</div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginTop: 4 }}>Bs. {p.price}</div>
                 </div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {p.price}</div>
               </div>
+              <button onClick={() => onToggleLike(p)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16, backdropFilter: 'blur(4px)' }}>
+                {liked ? '❤️' : '🤍'}
+              </button>
             </div>
           )
         })}
         {products.length === 0 && (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>👕</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16 }}>No hay prendas disponibles</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", color: '#1a1209', fontSize: 16 }}>No hay prendas disponibles</div>
           </div>
         )}
       </div>
@@ -303,40 +283,35 @@ export default function Catalogue() {
   const likedProducts = products.filter(p => likedIds.includes(p.id))
   const hasFilter = filterSize || priceMax < maxPrice
 
-  if (!mode) return <ModePicker onPick={pickMode} />
-
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="spinner" style={{ borderColor: '#3d3020', borderTopColor: '#f5e6c8' }} />
+      <div style={{ width: 32, height: 32, border: '2px solid #3d3020', borderTopColor: '#f5e6c8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 
+  if (!mode) return <ModePicker onPick={pickMode} />
+
   const filterBar = (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px 4px' }}>
-        <button onClick={() => setShowFilters(f => !f)} style={{ background: showFilters ? '#f5e6c8' : 'transparent', color: showFilters ? '#1a1209' : '#9e8a6a', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-          {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: showFilters ? '#1a1209' : '#f5e6c8', display: 'inline-block' }} />}
+      <div style={{ display: 'flex', gap: 8, padding: '8px 12px', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#f5e6c8' : 'transparent', color: hasFilter ? '#1a1209' : '#9e8a6a', border: `1px solid ${hasFilter ? '#c4b9a8' : '#e8e0d4'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1209', display: 'inline-block' }} />}
           Filtros
         </button>
-        {hasFilter && (
-          <button onClick={() => { setFilterSize(''); setPriceMax(maxPrice) }}
-            style={{ fontSize: 11, color: '#9e8a6a', background: 'rgba(26,18,9,0.6)', border: '1px solid #3d3020', borderRadius: 99, padding: '4px 10px', cursor: 'pointer' }}>
-            {filterSize || `Bs. ≤${priceMax}`} ✕
-          </button>
-        )}
       </div>
       {showFilters && (
-        <div style={{ background: '#241810', margin: '0 12px 8px', borderRadius: 10, padding: '12px 14px', border: '1px solid #3d3020' }}>
+        <div style={{ background: '#f0ede8', margin: '0 12px 8px', borderRadius: 10, padding: '12px 14px', border: '1px solid #e8e0d4' }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <select value={filterSize} onChange={e => setFilterSize(e.target.value)} style={{ flex: '1 1 80px', background: '#1a1209', color: '#f5e6c8', border: '1px solid #3d3020', borderRadius: 6, padding: '7px 10px', fontSize: 13 }}>
-              <option value="">Talla</option>
+            <select value={filterSize} onChange={e => setFilterSize(e.target.value)} style={{ flex: '1 1 80px', borderRadius: 6, padding: '7px 10px', fontSize: 13, border: '1px solid #e8e0d4' }}>
+              <option value="">Todas las tallas</option>
               {SIZES.map(s => <option key={s}>{s}</option>)}
             </select>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '2 1 160px' }}>
               <span style={{ fontSize: 11, color: '#9e8a6a', whiteSpace: 'nowrap' }}>Hasta Bs. {priceMax}</span>
               <input type="range" min={0} max={maxPrice} step={10} value={priceMax} onChange={e => setPriceMax(+e.target.value)} style={{ flex: 1 }} />
             </div>
-            {hasFilter && <button onClick={() => { setFilterSize(''); setPriceMax(maxPrice) }} style={{ fontSize: 11, color: '#9e8a6a', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>Limpiar</button>}
+            {hasFilter && <button onClick={() => { setFilterSize(''); setPriceMax(maxPrice) }} style={{ fontSize: 11, color: '#9e8a6a', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>Limpiar</button>}
           </div>
         </div>
       )}
@@ -347,7 +322,7 @@ export default function Catalogue() {
     <>
       <GridView products={queue} likedIds={likedIds} onToggleLike={toggleLike} onSwitchMode={switchMode} filterBar={filterBar} likedProducts={likedProducts} onRemoveLiked={removeLiked} />
       {showOnboarding && (
-        <OnboardingTooltip onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
+        <OnboardingTooltip mode="grid" onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
       )}
     </>
   )
@@ -446,7 +421,7 @@ export default function Catalogue() {
           <div style={{ textAlign: 'center', color: '#9e8a6a', padding: 40 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
             <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 20, marginBottom: 8 }}>¡Eso es todo!</div>
-            <div style={{ fontSize: 13, marginBottom: 24 }}>{likedIds.length > 0 ? `Tienes ${likedIds.length} favorito${likedIds.length !== 1 ? 's' : ''} guardado${likedIds.length !== 1 ? 's' : ''}` : 'No había prendas con esos filtros'}</div>
+            <div style={{ fontSize: 13, marginBottom: 24 }}>{likedIds.length > 0 ? `Tenés ${likedIds.length} favorito${likedIds.length !== 1 ? 's' : ''} guardado${likedIds.length !== 1 ? 's' : ''}` : 'No había prendas con esos filtros'}</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={restart} style={{ background: 'transparent', color: '#f5e6c8', border: '1px solid #3d3020', borderRadius: 8, padding: '10px 18px', fontSize: 13, cursor: 'pointer' }}>Ver de nuevo</button>
               {likedIds.length > 0 && <button onClick={() => setShowLiked(true)} style={{ background: '#f5e6c8', color: '#1a1209', border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Ver favoritos ({likedIds.length})</button>}
@@ -510,6 +485,10 @@ export default function Catalogue() {
         <div style={{ position: 'fixed', bottom: 96, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
           <span style={{ fontSize: 11, color: '#9e8a6a' }}>{index + 1} / {queue.length}</span>
         </div>
+      )}
+
+      {showOnboarding && (
+        <OnboardingTooltip mode="swipe" onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
       )}
     </div>
   )
