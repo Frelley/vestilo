@@ -109,19 +109,24 @@ export async function getProductsSorted(filters = {}) {
 // 2. Fall back to max numeric label + 1
 export async function getNextLabelForSize(_size) {
   // Check freed labels first (oldest first)
-  const { data: freed } = await supabase
+  const { data: freed, error: e1 } = await supabase
     .from('freed_labels')
     .select('id, label')
     .order('created_at', { ascending: true })
     .limit(1)
 
+  console.log('[label] freed_labels:', freed, 'error:', e1)
+
   if (freed?.length > 0 && /^\d+$/.test(freed[0].label)) {
     await supabase.from('freed_labels').delete().eq('id', freed[0].id)
+    console.log('[label] recycling:', freed[0].label)
     return freed[0].label
   }
 
   // Find highest purely-numeric label across all products
-  const { data } = await supabase.from('products').select('name')
+  const { data, error: e2 } = await supabase.from('products').select('name')
+
+  console.log('[label] products count:', data?.length, 'error:', e2)
 
   let max = 0
   ;(data || []).forEach(({ name }) => {
@@ -131,7 +136,9 @@ export async function getNextLabelForSize(_size) {
     }
   })
 
-  return String(max + 1).padStart(3, '0')
+  const next = String(max + 1).padStart(3, '0')
+  console.log('[label] next label:', next, '(max was', max, ')')
+  return next
 }
 
 // ─── Free a label back into the pool ─────────────────────────────────────────
