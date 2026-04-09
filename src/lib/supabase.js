@@ -55,6 +55,7 @@ export async function markSold(id, { sold_price, discount = 0 }) {
 }
 
 // ─── Sorted products (psychology-optimized) ───────────────────────────────────
+// Ranking uses raw like count only — skips are forced navigation, not genuine dislikes.
 export async function getProductsSorted(filters = {}) {
   const [productsRes, statsRes] = await Promise.all([
     getProducts(filters),
@@ -72,14 +73,15 @@ export async function getProductsSorted(filters = {}) {
     const ageMs = now - new Date(p.created_at).getTime()
     const isNew = ageMs < TWO_DAYS
     const stats = statsMap[p.id]
-    const total = stats ? (stats.likes + stats.skips) : 0
-    const ratio = total >= 5 ? stats.likes / total : 0
-    return { ...p, _isNew: isNew, _ratio: ratio, _ageMs: ageMs }
+    // Rank by raw like count — skips are navigation, not dislikes
+    const likes = stats?.likes || 0
+    const score = likes >= 3 ? likes : 0
+    return { ...p, _isNew: isNew, _score: score, _ageMs: ageMs }
   })
 
   const proven = scored
     .filter(p => !p._isNew)
-    .sort((a, b) => b._ratio - a._ratio)
+    .sort((a, b) => b._score - a._score)
 
   const newArrivals = scored
     .filter(p => p._isNew)
