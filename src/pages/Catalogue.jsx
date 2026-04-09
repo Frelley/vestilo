@@ -33,21 +33,22 @@ const WA_SVG = (
 )
 
 // ── Spotlight Onboarding ──────────────────────────────────────────────────────
-// Each step: { ref, title, desc, arrowDir: 'up'|'down'|'left'|'right' }
 function SpotlightOnboarding({ steps, onDone }) {
   const [stepIdx, setStepIdx] = useState(0)
   const [rect, setRect]       = useState(null)
-  const tooltipRef            = useRef(null)
 
-  const step = steps[stepIdx]
+  const step   = steps[stepIdx]
   const isLast = stepIdx === steps.length - 1
 
-  // Measure the target element
   useEffect(() => {
     if (!step?.ref?.current) { setRect(null); return }
-    const r = step.ref.current.getBoundingClientRect()
-    setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
-  }, [stepIdx, step])
+    // Small delay ensures layout is settled (especially for bottom-fixed elements)
+    const t = setTimeout(() => {
+      const r = step.ref.current.getBoundingClientRect()
+      setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
+    }, 50)
+    return () => clearTimeout(t)
+  }, [stepIdx])
 
   function next() {
     if (isLast) { onDone() } else { setStepIdx(i => i + 1) }
@@ -55,70 +56,49 @@ function SpotlightOnboarding({ steps, onDone }) {
 
   if (!step) return null
 
-  const PAD = 10  // spotlight padding around element
-  const spotTop    = rect ? rect.top    - PAD : 0
-  const spotLeft   = rect ? rect.left   - PAD : 0
-  const spotW      = rect ? rect.width  + PAD * 2 : 0
-  const spotH      = rect ? rect.height + PAD * 2 : 0
-  const spotCx     = spotLeft + spotW / 2
-  const spotCy     = spotTop  + spotH / 2
+  const PAD  = 8
+  const vw   = window.innerWidth
+  const vh   = window.innerHeight
+  const TW   = Math.min(vw - 32, 280)
+  const TH   = 150   // estimated tooltip height
+  const AS   = 10    // arrow size
 
-  // Position tooltip above or below the spotlight
-  const arrowDir   = step.arrowDir || 'down'
-  const vw         = window.innerWidth
-  const vh         = window.innerHeight
-  const TW         = Math.min(vw - 32, 300)
-  const TH_EST     = 110
+  // Spotlight bounds
+  const sTop  = rect ? rect.top    - PAD : vh / 2 - 20
+  const sLeft = rect ? rect.left   - PAD : vw / 2 - 20
+  const sW    = rect ? rect.width  + PAD * 2 : 40
+  const sH    = rect ? rect.height + PAD * 2 : 40
+  const sCx   = sLeft + sW / 2  // center x of spotlight
+  const sCy   = sTop  + sH / 2  // center y of spotlight
+
+  // Auto-decide: put tooltip above if element is in bottom half, below if top half
+  const placeAbove = sCy > vh / 2
 
   let tooltipTop, tooltipLeft, arrowStyle
-  const ARROW_SIZE = 10
 
-  if (arrowDir === 'down') {
-    // tooltip above the element, arrow points down
-    tooltipTop  = Math.max(8, spotTop - TH_EST - ARROW_SIZE - 8)
-    tooltipLeft = Math.min(Math.max(16, spotCx - TW / 2), vw - TW - 16)
-    const arrowLeft = spotCx - tooltipLeft - ARROW_SIZE
-    arrowStyle = {
-      position: 'absolute', bottom: -ARROW_SIZE * 2 + 2, left: Math.max(12, Math.min(arrowLeft, TW - 24)),
+  if (placeAbove) {
+    // Tooltip above spotlight, arrow points down toward element
+    tooltipTop  = Math.max(8, sTop - TH - AS - 6)
+    tooltipLeft = Math.min(Math.max(16, sCx - TW / 2), vw - TW - 16)
+    const ax    = Math.max(AS + 4, Math.min(sCx - tooltipLeft - AS, TW - AS * 3))
+    arrowStyle  = {
+      position: 'absolute', bottom: -(AS * 2) + 1, left: ax,
       width: 0, height: 0,
-      borderLeft: `${ARROW_SIZE}px solid transparent`,
-      borderRight: `${ARROW_SIZE}px solid transparent`,
-      borderTop: `${ARROW_SIZE * 2}px solid #f5e6c8`,
-    }
-  } else if (arrowDir === 'up') {
-    // tooltip below the element, arrow points up
-    tooltipTop  = spotTop + spotH + ARROW_SIZE + 8
-    tooltipLeft = Math.min(Math.max(16, spotCx - TW / 2), vw - TW - 16)
-    const arrowLeft = spotCx - tooltipLeft - ARROW_SIZE
-    arrowStyle = {
-      position: 'absolute', top: -ARROW_SIZE * 2 + 2, left: Math.max(12, Math.min(arrowLeft, TW - 24)),
-      width: 0, height: 0,
-      borderLeft: `${ARROW_SIZE}px solid transparent`,
-      borderRight: `${ARROW_SIZE}px solid transparent`,
-      borderBottom: `${ARROW_SIZE * 2}px solid #f5e6c8`,
-    }
-  } else if (arrowDir === 'right') {
-    tooltipTop  = Math.min(Math.max(8, spotCy - TH_EST / 2), vh - TH_EST - 8)
-    tooltipLeft = Math.max(16, spotLeft - TW - ARROW_SIZE - 8)
-    const arrowTop = spotCy - tooltipTop - ARROW_SIZE
-    arrowStyle = {
-      position: 'absolute', right: -ARROW_SIZE * 2 + 2, top: Math.max(12, Math.min(arrowTop, TH_EST - 24)),
-      width: 0, height: 0,
-      borderTop: `${ARROW_SIZE}px solid transparent`,
-      borderBottom: `${ARROW_SIZE}px solid transparent`,
-      borderLeft: `${ARROW_SIZE * 2}px solid #f5e6c8`,
+      borderLeft:  `${AS}px solid transparent`,
+      borderRight: `${AS}px solid transparent`,
+      borderTop:   `${AS * 2}px solid #f5e6c8`,
     }
   } else {
-    // left arrow — tooltip to the right
-    tooltipTop  = Math.min(Math.max(8, spotCy - TH_EST / 2), vh - TH_EST - 8)
-    tooltipLeft = spotLeft + spotW + ARROW_SIZE + 8
-    const arrowTop = spotCy - tooltipTop - ARROW_SIZE
-    arrowStyle = {
-      position: 'absolute', left: -ARROW_SIZE * 2 + 2, top: Math.max(12, Math.min(arrowTop, TH_EST - 24)),
+    // Tooltip below spotlight, arrow points up toward element
+    tooltipTop  = Math.min(sTop + sH + AS + 6, vh - TH - 8)
+    tooltipLeft = Math.min(Math.max(16, sCx - TW / 2), vw - TW - 16)
+    const ax    = Math.max(AS + 4, Math.min(sCx - tooltipLeft - AS, TW - AS * 3))
+    arrowStyle  = {
+      position: 'absolute', top: -(AS * 2) + 1, left: ax,
       width: 0, height: 0,
-      borderTop: `${ARROW_SIZE}px solid transparent`,
-      borderBottom: `${ARROW_SIZE}px solid transparent`,
-      borderRight: `${ARROW_SIZE * 2}px solid #f5e6c8`,
+      borderLeft:   `${AS}px solid transparent`,
+      borderRight:  `${AS}px solid transparent`,
+      borderBottom: `${AS * 2}px solid #f5e6c8`,
     }
   }
 
@@ -126,75 +106,61 @@ function SpotlightOnboarding({ steps, onDone }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, pointerEvents: 'none' }}>
       <style>{`
         @keyframes pulse-ring {
-          0%   { box-shadow: 0 0 0 0 rgba(245,230,200,0.6); }
-          70%  { box-shadow: 0 0 0 12px rgba(245,230,200,0); }
+          0%   { box-shadow: 0 0 0 0 rgba(245,230,200,0.55); }
+          70%  { box-shadow: 0 0 0 14px rgba(245,230,200,0); }
           100% { box-shadow: 0 0 0 0 rgba(245,230,200,0); }
         }
         @keyframes tooltip-in {
-          from { opacity: 0; transform: scale(0.92); }
-          to   { opacity: 1; transform: scale(1); }
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
-      {/* Dark overlay with cutout using SVG clip */}
+      {/* Dark overlay with cutout */}
       <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         <defs>
           <mask id="spotlight-mask">
             <rect width="100%" height="100%" fill="white" />
-            {rect && (
-              <rect
-                x={spotLeft} y={spotTop} width={spotW} height={spotH}
-                rx={10} ry={10} fill="black"
-              />
-            )}
+            {rect && <rect x={sLeft} y={sTop} width={sW} height={sH} rx={10} ry={10} fill="black" />}
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="rgba(0,0,0,0.78)" mask="url(#spotlight-mask)" />
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.8)" mask="url(#spotlight-mask)" />
       </svg>
 
-      {/* Pulsing ring around spotlight */}
+      {/* Pulsing ring */}
       {rect && (
         <div style={{
-          position: 'absolute',
-          top: spotTop, left: spotLeft, width: spotW, height: spotH,
-          borderRadius: 10,
-          border: '2px solid rgba(245,230,200,0.8)',
-          animation: 'pulse-ring 1.8s ease-out infinite',
-          pointerEvents: 'none',
+          position: 'absolute', top: sTop, left: sLeft, width: sW, height: sH,
+          borderRadius: 10, border: '2px solid rgba(245,230,200,0.9)',
+          animation: 'pulse-ring 1.8s ease-out infinite', pointerEvents: 'none',
         }} />
       )}
 
-      {/* Tooltip bubble */}
-      <div
-        ref={tooltipRef}
-        style={{
-          position: 'absolute',
-          top: tooltipTop,
-          left: tooltipLeft,
-          width: TW,
-          background: '#f5e6c8',
-          borderRadius: 14,
-          padding: '14px 16px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          pointerEvents: 'all',
-          animation: 'tooltip-in 0.2s ease',
-        }}
-      >
+      {/* Tooltip */}
+      <div style={{
+        position: 'absolute', top: tooltipTop, left: tooltipLeft, width: TW,
+        background: '#f5e6c8', borderRadius: 14, padding: '14px 16px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+        pointerEvents: 'all',
+        animation: 'tooltip-in 0.25s ease',
+      }}>
+        {/* Arrow */}
         <div style={{ position: 'relative' }}>
-          <div style={{ arrowStyle }}/>
           <div style={arrowStyle} />
         </div>
 
-        {/* Step dots */}
-        <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
-          {steps.map((_, i) => (
-            <div key={i} style={{
-              width: i === stepIdx ? 16 : 6, height: 6, borderRadius: 3,
-              background: i === stepIdx ? '#1a1209' : '#c4b9a8',
-              transition: 'width 0.2s',
-            }} />
-          ))}
-        </div>
+        {/* Progress dots */}
+        {steps.length > 1 && (
+          <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+            {steps.map((_, i) => (
+              <div key={i} style={{
+                width: i === stepIdx ? 16 : 6, height: 6, borderRadius: 3,
+                background: i === stepIdx ? '#1a1209' : '#c4b9a8',
+                transition: 'width 0.2s',
+              }} />
+            ))}
+          </div>
+        )}
 
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginBottom: 5 }}>
           {step.title}
@@ -202,15 +168,11 @@ function SpotlightOnboarding({ steps, onDone }) {
         <div style={{ fontSize: 12, color: '#3d3020', lineHeight: 1.55, marginBottom: 14 }}>
           {step.desc}
         </div>
-
-        <button
-          onClick={next}
-          style={{
-            width: '100%', padding: '9px', borderRadius: 8,
-            background: '#1a1209', color: '#f5e6c8', border: 'none',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}
-        >
+        <button onClick={next} style={{
+          width: '100%', padding: '9px', borderRadius: 8,
+          background: '#1a1209', color: '#f5e6c8', border: 'none',
+          fontSize: 13, fontWeight: 700, cursor: 'pointer',
+        }}>
           {isLast ? '¡Entendido! ✓' : 'Siguiente →'}
         </button>
       </div>
@@ -262,7 +224,6 @@ function LikedList({ likedProducts, onBack, onRemove }) {
     ref: waBtnRef,
     title: '¡Ya casi! Pedí por WhatsApp',
     desc: 'Tocá este botón para enviar tu lista de favoritas directo a la tienda. Se arma el mensaje automáticamente.',
-    arrowDir: 'up',
   }]
 
   return (
@@ -448,51 +409,16 @@ export default function Catalogue() {
 
   // Onboarding steps per mode
   const swipeSteps = [
-    {
-      ref: refCardArea,
-      title: 'Deslizá la tarjeta',
-      desc: 'Deslizá a la derecha si te gusta, a la izquierda para pasar. También podés usar los botones de abajo.',
-      arrowDir: 'down',
-    },
-    {
-      ref: refLikeBtn,
-      title: '♥ Guardá favoritas',
-      desc: 'Tocá el corazón para agregar esta prenda a tu lista de favoritas.',
-      arrowDir: 'up',
-    },
-    {
-      ref: refSkipBtn,
-      title: '✕ Pasá a la siguiente',
-      desc: 'Tocá la X para ver la siguiente prenda sin guardarla.',
-      arrowDir: 'up',
-    },
-    {
-      ref: refFilterBtn,
-      title: 'Filtrá por talla o precio',
-      desc: 'Tocá "Filtros" para ver solo las prendas que te quedan y están dentro de tu presupuesto.',
-      arrowDir: 'down',
-    },
-    {
-      ref: refLikedBtn,
-      title: 'Tu lista de favoritas',
-      desc: 'Acá aparecen todas las que guardaste. Cuando termines, podés pedir todo junto por WhatsApp.',
-      arrowDir: 'down',
-    },
+    { ref: refCardArea,  title: 'Deslizá la tarjeta',        desc: 'Deslizá a la derecha si te gusta, a la izquierda para pasar. También podés usar los botones de abajo.' },
+    { ref: refLikeBtn,   title: '♥ Guardá favoritas',        desc: 'Tocá el corazón para agregar esta prenda a tu lista de favoritas.' },
+    { ref: refSkipBtn,   title: '✕ Pasá a la siguiente',     desc: 'Tocá la X para ver la siguiente prenda sin guardarla.' },
+    { ref: refFilterBtn, title: 'Filtrá por talla o precio', desc: 'Tocá "Filtros" para ver solo las prendas que te quedan y están dentro de tu presupuesto.' },
+    { ref: refLikedBtn,  title: 'Tu lista de favoritas',     desc: 'Acá aparecen todas las que guardaste. Cuando termines, podés pedir todo junto por WhatsApp.' },
   ]
 
   const gridSteps = [
-    {
-      ref: refGridFilter,
-      title: 'Filtrá por talla o precio',
-      desc: 'Usá los filtros para encontrar rápido lo que buscás por talla o presupuesto.',
-      arrowDir: 'down',
-    },
-    {
-      ref: refGridLiked,
-      title: 'Guardá tus favoritas',
-      desc: 'Tocá el 🤍 en cualquier prenda para guardarla. Después podés pedir todo junto por WhatsApp.',
-      arrowDir: 'down',
-    },
+    { ref: refGridFilter, title: 'Filtrá por talla o precio', desc: 'Usá los filtros para encontrar rápido lo que buscás por talla o presupuesto.' },
+    { ref: refGridLiked,  title: 'Guardá tus favoritas',      desc: 'Tocá el 🤍 en cualquier prenda para guardarla. Después podés pedir todo junto por WhatsApp.' },
   ]
 
   const onboardingSteps = mode === 'swipe' ? swipeSteps : gridSteps
