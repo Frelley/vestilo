@@ -1,37 +1,26 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getProductsSorted, supabase } from '../lib/supabase.js'
 import { SIZES, COLOR_DOTS, WA_NUMBER, colorsArray } from '../lib/constants.js'
 
 const SWIPE_THRESHOLD = 75
-const STORAGE_KEY = 'vestilo-liked'
-const MODE_KEY = 'vestilo-mode'
-const ONBOARDING_KEY = 'vestilo-onboarded'
+const STORAGE_KEY     = 'vestilo-liked'
+const MODE_KEY        = 'vestilo-mode'
+const ONBOARDING_KEY    = 'vestilo-onboarded'
+const WA_ONBOARDING_KEY = 'vestilo-wa-onboarded'
 
-function getOnboarded() {
-  try { return localStorage.getItem(ONBOARDING_KEY) === '1' } catch { return false }
-}
-function saveOnboarded() {
-  try { localStorage.setItem(ONBOARDING_KEY, '1') } catch {}
-}
-
-function getLiked() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] }
-}
-function saveLiked(ids) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)) } catch {}
-}
-function getSavedMode() {
-  try { return localStorage.getItem(MODE_KEY) || null } catch { return null }
-}
-function saveMode(m) {
-  try { localStorage.setItem(MODE_KEY, m) } catch {}
-}
+function getOnboarded()    { try { return localStorage.getItem(ONBOARDING_KEY) === '1' } catch { return false } }
+function saveOnboarded()   { try { localStorage.setItem(ONBOARDING_KEY, '1') } catch {} }
+function getWaOnboarded()  { try { return localStorage.getItem(WA_ONBOARDING_KEY) === '1' } catch { return false } }
+function saveWaOnboarded() { try { localStorage.setItem(WA_ONBOARDING_KEY, '1') } catch {} }
+function getLiked()      { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] } }
+function saveLiked(ids)  { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)) } catch {} }
+function getSavedMode()  { try { return localStorage.getItem(MODE_KEY) || null } catch { return null } }
+function saveMode(m)     { try { localStorage.setItem(MODE_KEY, m) } catch {} }
 
 async function recordInteraction(productId, type) {
   try { await supabase.rpc('record_swipe', { p_product_id: productId, p_type: type }) } catch {}
 }
-
 function getPhotos(p) {
   if (!p) return []
   return p.photos?.length ? p.photos : p.photo_url ? [p.photo_url] : []
@@ -43,6 +32,192 @@ const WA_SVG = (
   </svg>
 )
 
+// ── Spotlight Onboarding ──────────────────────────────────────────────────────
+// Each step: { ref, title, desc, arrowDir: 'up'|'down'|'left'|'right' }
+function SpotlightOnboarding({ steps, onDone }) {
+  const [stepIdx, setStepIdx] = useState(0)
+  const [rect, setRect]       = useState(null)
+  const tooltipRef            = useRef(null)
+
+  const step = steps[stepIdx]
+  const isLast = stepIdx === steps.length - 1
+
+  // Measure the target element
+  useEffect(() => {
+    if (!step?.ref?.current) { setRect(null); return }
+    const r = step.ref.current.getBoundingClientRect()
+    setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
+  }, [stepIdx, step])
+
+  function next() {
+    if (isLast) { onDone() } else { setStepIdx(i => i + 1) }
+  }
+
+  if (!step) return null
+
+  const PAD = 10  // spotlight padding around element
+  const spotTop    = rect ? rect.top    - PAD : 0
+  const spotLeft   = rect ? rect.left   - PAD : 0
+  const spotW      = rect ? rect.width  + PAD * 2 : 0
+  const spotH      = rect ? rect.height + PAD * 2 : 0
+  const spotCx     = spotLeft + spotW / 2
+  const spotCy     = spotTop  + spotH / 2
+
+  // Position tooltip above or below the spotlight
+  const arrowDir   = step.arrowDir || 'down'
+  const vw         = window.innerWidth
+  const vh         = window.innerHeight
+  const TW         = Math.min(vw - 32, 300)
+  const TH_EST     = 110
+
+  let tooltipTop, tooltipLeft, arrowStyle
+  const ARROW_SIZE = 10
+
+  if (arrowDir === 'down') {
+    // tooltip above the element, arrow points down
+    tooltipTop  = Math.max(8, spotTop - TH_EST - ARROW_SIZE - 8)
+    tooltipLeft = Math.min(Math.max(16, spotCx - TW / 2), vw - TW - 16)
+    const arrowLeft = spotCx - tooltipLeft - ARROW_SIZE
+    arrowStyle = {
+      position: 'absolute', bottom: -ARROW_SIZE * 2 + 2, left: Math.max(12, Math.min(arrowLeft, TW - 24)),
+      width: 0, height: 0,
+      borderLeft: `${ARROW_SIZE}px solid transparent`,
+      borderRight: `${ARROW_SIZE}px solid transparent`,
+      borderTop: `${ARROW_SIZE * 2}px solid #f5e6c8`,
+    }
+  } else if (arrowDir === 'up') {
+    // tooltip below the element, arrow points up
+    tooltipTop  = spotTop + spotH + ARROW_SIZE + 8
+    tooltipLeft = Math.min(Math.max(16, spotCx - TW / 2), vw - TW - 16)
+    const arrowLeft = spotCx - tooltipLeft - ARROW_SIZE
+    arrowStyle = {
+      position: 'absolute', top: -ARROW_SIZE * 2 + 2, left: Math.max(12, Math.min(arrowLeft, TW - 24)),
+      width: 0, height: 0,
+      borderLeft: `${ARROW_SIZE}px solid transparent`,
+      borderRight: `${ARROW_SIZE}px solid transparent`,
+      borderBottom: `${ARROW_SIZE * 2}px solid #f5e6c8`,
+    }
+  } else if (arrowDir === 'right') {
+    tooltipTop  = Math.min(Math.max(8, spotCy - TH_EST / 2), vh - TH_EST - 8)
+    tooltipLeft = Math.max(16, spotLeft - TW - ARROW_SIZE - 8)
+    const arrowTop = spotCy - tooltipTop - ARROW_SIZE
+    arrowStyle = {
+      position: 'absolute', right: -ARROW_SIZE * 2 + 2, top: Math.max(12, Math.min(arrowTop, TH_EST - 24)),
+      width: 0, height: 0,
+      borderTop: `${ARROW_SIZE}px solid transparent`,
+      borderBottom: `${ARROW_SIZE}px solid transparent`,
+      borderLeft: `${ARROW_SIZE * 2}px solid #f5e6c8`,
+    }
+  } else {
+    // left arrow — tooltip to the right
+    tooltipTop  = Math.min(Math.max(8, spotCy - TH_EST / 2), vh - TH_EST - 8)
+    tooltipLeft = spotLeft + spotW + ARROW_SIZE + 8
+    const arrowTop = spotCy - tooltipTop - ARROW_SIZE
+    arrowStyle = {
+      position: 'absolute', left: -ARROW_SIZE * 2 + 2, top: Math.max(12, Math.min(arrowTop, TH_EST - 24)),
+      width: 0, height: 0,
+      borderTop: `${ARROW_SIZE}px solid transparent`,
+      borderBottom: `${ARROW_SIZE}px solid transparent`,
+      borderRight: `${ARROW_SIZE * 2}px solid #f5e6c8`,
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 500, pointerEvents: 'none' }}>
+      <style>{`
+        @keyframes pulse-ring {
+          0%   { box-shadow: 0 0 0 0 rgba(245,230,200,0.6); }
+          70%  { box-shadow: 0 0 0 12px rgba(245,230,200,0); }
+          100% { box-shadow: 0 0 0 0 rgba(245,230,200,0); }
+        }
+        @keyframes tooltip-in {
+          from { opacity: 0; transform: scale(0.92); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+
+      {/* Dark overlay with cutout using SVG clip */}
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        <defs>
+          <mask id="spotlight-mask">
+            <rect width="100%" height="100%" fill="white" />
+            {rect && (
+              <rect
+                x={spotLeft} y={spotTop} width={spotW} height={spotH}
+                rx={10} ry={10} fill="black"
+              />
+            )}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.78)" mask="url(#spotlight-mask)" />
+      </svg>
+
+      {/* Pulsing ring around spotlight */}
+      {rect && (
+        <div style={{
+          position: 'absolute',
+          top: spotTop, left: spotLeft, width: spotW, height: spotH,
+          borderRadius: 10,
+          border: '2px solid rgba(245,230,200,0.8)',
+          animation: 'pulse-ring 1.8s ease-out infinite',
+          pointerEvents: 'none',
+        }} />
+      )}
+
+      {/* Tooltip bubble */}
+      <div
+        ref={tooltipRef}
+        style={{
+          position: 'absolute',
+          top: tooltipTop,
+          left: tooltipLeft,
+          width: TW,
+          background: '#f5e6c8',
+          borderRadius: 14,
+          padding: '14px 16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          pointerEvents: 'all',
+          animation: 'tooltip-in 0.2s ease',
+        }}
+      >
+        <div style={{ position: 'relative' }}>
+          <div style={{ arrowStyle }}/>
+          <div style={arrowStyle} />
+        </div>
+
+        {/* Step dots */}
+        <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+          {steps.map((_, i) => (
+            <div key={i} style={{
+              width: i === stepIdx ? 16 : 6, height: 6, borderRadius: 3,
+              background: i === stepIdx ? '#1a1209' : '#c4b9a8',
+              transition: 'width 0.2s',
+            }} />
+          ))}
+        </div>
+
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginBottom: 5 }}>
+          {step.title}
+        </div>
+        <div style={{ fontSize: 12, color: '#3d3020', lineHeight: 1.55, marginBottom: 14 }}>
+          {step.desc}
+        </div>
+
+        <button
+          onClick={next}
+          style={{
+            width: '100%', padding: '9px', borderRadius: 8,
+            background: '#1a1209', color: '#f5e6c8', border: 'none',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          {isLast ? '¡Entendido! ✓' : 'Siguiente →'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Mode picker ───────────────────────────────────────────────────────────────
 function ModePicker({ onPick }) {
   return (
@@ -53,7 +228,7 @@ function ModePicker({ onPick }) {
       <div style={{ display: 'flex', gap: 14, width: '100%', maxWidth: 340 }}>
         {[
           { key: 'swipe', icon: '👆', label: 'Swipe', desc: 'Desliza una por una y guarda tus favoritas' },
-          { key: 'grid', icon: '🗂️', label: 'Catálogo', desc: 'Ve todas las prendas en una cuadrícula' },
+          { key: 'grid',  icon: '🗂️', label: 'Catálogo', desc: 'Ve todas las prendas en una cuadrícula' },
         ].map(opt => (
           <button key={opt.key} onClick={() => onPick(opt.key)} style={{
             flex: 1, background: '#241810', border: '1px solid #3d3020', borderRadius: 16,
@@ -69,66 +244,26 @@ function ModePicker({ onPick }) {
   )
 }
 
-function OnboardingTooltip({ mode, onDismiss }) {
-  const swipeTips = [
-    { icon: '♥', label: 'Guardá lo que te gusta', desc: 'Deslizá a la derecha o tocá ♥ para guardar una prenda en tus favoritos.' },
-    { icon: '📸', label: 'Mirá todas las fotos', desc: 'Tocá la tarjeta para ver más fotos de la misma prenda.' },
-    { icon: '🔍', label: 'Filtrá por talla o precio', desc: 'Usá el botón "Filtros" arriba para ver solo lo que te queda.' },
-    { icon: '🛍️', label: 'Armá tu pedido', desc: 'Tus favoritas se acumulan en el 🤍. Cuando termines, pedí todo junto por WhatsApp.' },
-  ]
-  const gridTips = [
-    { icon: '🤍', label: 'Guardá lo que te gusta', desc: 'Tocá el 🤍 en cualquier prenda para agregarla a tus favoritos.' },
-    { icon: '🔍', label: 'Filtrá por talla o precio', desc: 'Usá los filtros arriba para encontrar rápido lo que buscás.' },
-    { icon: '📸', label: 'Mirá los detalles', desc: 'Tocá cualquier prenda para ver todas sus fotos y detalles.' },
-    { icon: '💬', label: 'Pedí por WhatsApp', desc: 'Guardá tus favoritas y enviá todo el pedido en un solo mensaje.' },
-  ]
-  const tips = mode === 'swipe' ? swipeTips : gridTips
-
-  return (
-    <>
-      <div onClick={onDismiss} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.4)' }} />
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
-        background: '#1a1209', borderTop: '1px solid #3d3020',
-        borderRadius: '18px 18px 0 0',
-        padding: '20px 24px 40px',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
-        animation: 'slideup 0.3s ease',
-      }}>
-        <style>{`@keyframes slideup { from { transform: translateY(100%) } to { transform: translateY(0) } }`}</style>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#3d3020' }} />
-        </div>
-        <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700, marginBottom: 20 }}>
-          ¿Cómo funciona?
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-          {tips.map(({ icon, label, desc }) => (
-            <div key={label} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#241810', border: '1px solid #3d3020', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{icon}</div>
-              <div>
-                <div style={{ color: '#f5e6c8', fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{label}</div>
-                <div style={{ color: '#9e8a6a', fontSize: 12, lineHeight: 1.5 }}>{desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button onClick={onDismiss} style={{
-          width: '100%', padding: '13px', borderRadius: 10,
-          background: '#f5e6c8', color: '#1a1209', border: 'none',
-          fontSize: 14, fontWeight: 700, cursor: 'pointer',
-        }}>
-          ¡Entendido, a explorar! →
-        </button>
-      </div>
-    </>
-  )
-}
-
 // ── Liked list ────────────────────────────────────────────────────────────────
 function LikedList({ likedProducts, onBack, onRemove }) {
-  const waText = likedProducts.map(p => `• ${p.name} — Talla ${p.size} — Bs. ${p.price}`).join('\n')
-  const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
+  const waText  = likedProducts.map(p => `• ${p.name} — Talla ${p.size} — Bs. ${p.price}`).join('\n')
+  const waUrl   = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
+  const waBtnRef = useRef(null)
+  const [showWaOnboarding, setShowWaOnboarding] = useState(false)
+
+  // Trigger WA onboarding once, only when there are items
+  useEffect(() => {
+    if (likedProducts.length > 0 && !getWaOnboarded()) {
+      setTimeout(() => setShowWaOnboarding(true), 350)
+    }
+  }, [])
+
+  const waSteps = [{
+    ref: waBtnRef,
+    title: '¡Ya casi! Pedí por WhatsApp',
+    desc: 'Tocá este botón para enviar tu lista de favoritas directo a la tienda. Se arma el mensaje automáticamente.',
+    arrowDir: 'up',
+  }]
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column' }}>
@@ -147,7 +282,8 @@ function LikedList({ likedProducts, onBack, onRemove }) {
           const photo = getPhotos(p)[0]
           return (
             <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #3d3020' }}>
-              {photo ? <img src={photo} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+              {photo
+                ? <img src={photo} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
                 : <div style={{ width: 56, height: 56, background: '#241810', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>👕</div>}
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 14, fontWeight: 600 }}>{p.name}</div>
@@ -161,18 +297,26 @@ function LikedList({ likedProducts, onBack, onRemove }) {
       </div>
       {likedProducts.length > 0 && (
         <div style={{ padding: '16px 16px 36px' }}>
-          <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+          <a ref={waBtnRef} href={waUrl} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
             {WA_SVG} Pedir por WhatsApp ({likedProducts.length})
           </a>
         </div>
+      )}
+
+      {showWaOnboarding && (
+        <SpotlightOnboarding
+          steps={waSteps}
+          onDone={() => { setShowWaOnboarding(false); saveWaOnboarded() }}
+        />
       )}
     </div>
   )
 }
 
 // ── Grid view ─────────────────────────────────────────────────────────────────
-function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked }) {
-  const navigate = useNavigate()
+function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked, filterBtnRef, likedBtnRef }) {
+  const navigate   = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
   const likedCount = likedIds.length
 
@@ -186,8 +330,11 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           <div style={{ fontSize: 9, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={onSwitchMode} title="Modo swipe" style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>👆</button>
-          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button ref={filterBtnRef} onClick={() => {}} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>
+            Filtros
+          </button>
+          <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>👆</button>
+          <button ref={likedBtnRef} onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ fontSize: 14 }}>🤍</span>
             {likedCount > 0 && <span style={{ background: '#1a1209', color: '#f5e6c8', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
           </button>
@@ -195,13 +342,14 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
       </div>
       {filterBar}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 12 }}>
-        {products.map(p => {
+        {products.map((p, pi) => {
           const photo = getPhotos(p)[0]
           const liked = likedIds.includes(p.id)
           return (
             <div key={p.id} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e0d4', position: 'relative' }}>
               <div onClick={() => navigate(`/p/${p.id}`)} style={{ cursor: 'pointer' }}>
-                {photo ? <img src={photo} alt={p.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
+                {photo
+                  ? <img src={photo} alt={p.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
                   : <div style={{ aspectRatio: '3/4', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>👕</div>}
                 <div style={{ padding: '8px 10px 10px' }}>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#1a1209', marginBottom: 2 }}>{p.name}</div>
@@ -228,23 +376,35 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Catalogue() {
-  const [mode, setMode] = useState(getSavedMode)
-  const [products, setProducts] = useState([])
-  const [queue, setQueue] = useState([])
-  const [index, setIndex] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [likedIds, setLikedIds] = useState(getLiked)
+  const [mode, setMode]           = useState(getSavedMode)
+  const [products, setProducts]   = useState([])
+  const [queue, setQueue]         = useState([])
+  const [index, setIndex]         = useState(0)
+  const [loading, setLoading]     = useState(true)
+  const [likedIds, setLikedIds]   = useState(getLiked)
   const [showLiked, setShowLiked] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [filterSize, setFilterSize] = useState('')
-  const [priceMax, setPriceMax] = useState(1000)
-  const [maxPrice, setMaxPrice] = useState(1000)
-  const [drag, setDrag] = useState({ active: false, x: 0, startX: 0, startY: 0 })
-  const [swipeDir, setSwipeDir] = useState(null)
-  const [photoIdx, setPhotoIdx] = useState(0)
+  const [filterSize, setFilterSize]   = useState('')
+  const [priceMax, setPriceMax]       = useState(1000)
+  const [maxPrice, setMaxPrice]       = useState(1000)
+  const [drag, setDrag]           = useState({ active: false, x: 0, startX: 0, startY: 0 })
+  const [swipeDir, setSwipeDir]   = useState(null)
+  const [photoIdx, setPhotoIdx]   = useState(0)
   const [showOnboarding, setShowOnboarding] = useState(false)
+
   const dragRef = useRef(drag)
   dragRef.current = drag
+
+  // Refs for onboarding targets
+  const refLikeBtn    = useRef(null)
+  const refSkipBtn    = useRef(null)
+  const refFilterBtn  = useRef(null)
+  const refLikedBtn   = useRef(null)
+  const refCardArea   = useRef(null)
+
+  // Grid refs
+  const refGridFilter = useRef(null)
+  const refGridLiked  = useRef(null)
 
   useEffect(() => { load() }, [])
   useEffect(() => { saveLiked(likedIds) }, [likedIds])
@@ -271,7 +431,10 @@ export default function Catalogue() {
 
   function pickMode(m) {
     setMode(m); saveMode(m)
-    if (!getOnboarded()) setShowOnboarding(true)
+    if (!getOnboarded()) {
+      // slight delay so the UI renders first, then we measure rects
+      setTimeout(() => setShowOnboarding(true), 350)
+    }
   }
   function switchMode() { pickMode(mode === 'swipe' ? 'grid' : 'swipe') }
   function toggleLike(p) {
@@ -281,7 +444,58 @@ export default function Catalogue() {
   function removeLiked(id) { setLikedIds(prev => prev.filter(x => x !== id)) }
 
   const likedProducts = products.filter(p => likedIds.includes(p.id))
-  const hasFilter = filterSize || priceMax < maxPrice
+  const hasFilter     = filterSize || priceMax < maxPrice
+
+  // Onboarding steps per mode
+  const swipeSteps = [
+    {
+      ref: refCardArea,
+      title: 'Deslizá la tarjeta',
+      desc: 'Deslizá a la derecha si te gusta, a la izquierda para pasar. También podés usar los botones de abajo.',
+      arrowDir: 'down',
+    },
+    {
+      ref: refLikeBtn,
+      title: '♥ Guardá favoritas',
+      desc: 'Tocá el corazón para agregar esta prenda a tu lista de favoritas.',
+      arrowDir: 'up',
+    },
+    {
+      ref: refSkipBtn,
+      title: '✕ Pasá a la siguiente',
+      desc: 'Tocá la X para ver la siguiente prenda sin guardarla.',
+      arrowDir: 'up',
+    },
+    {
+      ref: refFilterBtn,
+      title: 'Filtrá por talla o precio',
+      desc: 'Tocá "Filtros" para ver solo las prendas que te quedan y están dentro de tu presupuesto.',
+      arrowDir: 'down',
+    },
+    {
+      ref: refLikedBtn,
+      title: 'Tu lista de favoritas',
+      desc: 'Acá aparecen todas las que guardaste. Cuando termines, podés pedir todo junto por WhatsApp.',
+      arrowDir: 'down',
+    },
+  ]
+
+  const gridSteps = [
+    {
+      ref: refGridFilter,
+      title: 'Filtrá por talla o precio',
+      desc: 'Usá los filtros para encontrar rápido lo que buscás por talla o presupuesto.',
+      arrowDir: 'down',
+    },
+    {
+      ref: refGridLiked,
+      title: 'Guardá tus favoritas',
+      desc: 'Tocá el 🤍 en cualquier prenda para guardarla. Después podés pedir todo junto por WhatsApp.',
+      arrowDir: 'down',
+    },
+  ]
+
+  const onboardingSteps = mode === 'swipe' ? swipeSteps : gridSteps
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -320,17 +534,25 @@ export default function Catalogue() {
 
   if (mode === 'grid') return (
     <>
-      <GridView products={queue} likedIds={likedIds} onToggleLike={toggleLike} onSwitchMode={switchMode} filterBar={filterBar} likedProducts={likedProducts} onRemoveLiked={removeLiked} />
+      <GridView
+        products={queue} likedIds={likedIds} onToggleLike={toggleLike}
+        onSwitchMode={switchMode} filterBar={filterBar}
+        likedProducts={likedProducts} onRemoveLiked={removeLiked}
+        filterBtnRef={refGridFilter} likedBtnRef={refGridLiked}
+      />
       {showOnboarding && (
-        <OnboardingTooltip mode="grid" onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
+        <SpotlightOnboarding
+          steps={gridSteps}
+          onDone={() => { setShowOnboarding(false); saveOnboarded() }}
+        />
       )}
     </>
   )
 
   // ── Swipe mode ────────────────────────────────────────────────────────────
-  const current = queue[index]
+  const current  = queue[index]
   const nextCard = queue[index + 1]
-  const photos = getPhotos(current)
+  const photos   = getPhotos(current)
 
   function animate(dir, cb) {
     setSwipeDir(dir)
@@ -371,35 +593,37 @@ export default function Catalogue() {
     }
   }
 
-  const dx = swipeDir === 'left' ? -420 : swipeDir === 'right' ? 420 : drag.x
-  const rot = dx * 0.07
+  const dx     = swipeDir === 'left' ? -420 : swipeDir === 'right' ? 420 : drag.x
+  const rot    = dx * 0.07
   const likeOp = Math.min(Math.max(dx / SWIPE_THRESHOLD, 0), 1)
   const skipOp = Math.min(Math.max(-dx / SWIPE_THRESHOLD, 0), 1)
 
-  if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={removeLiked} emptyMsg="Desliza a la derecha las camisetas que te gusten" />
+  if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={removeLiked} />
 
   const currentColors = colorsArray(current?.color)
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', userSelect: 'none' }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, fontWeight: 700 }}>Vestilo a tu sonso!</div>
           <div style={{ color: '#9e8a6a', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => setShowFilters(f => !f)} style={{ background: showFilters ? '#f5e6c8' : 'transparent', color: showFilters ? '#1a1209' : '#9e8a6a', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button ref={refFilterBtn} onClick={() => setShowFilters(f => !f)} style={{ background: showFilters ? '#f5e6c8' : 'transparent', color: showFilters ? '#1a1209' : '#9e8a6a', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: showFilters ? '#1a1209' : '#f5e6c8', display: 'inline-block' }} />}
             Filtros
           </button>
-          <button onClick={switchMode} title="Ver catálogo" style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>🗂️</button>
-          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button onClick={switchMode} style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>🗂️</button>
+          <button ref={refLikedBtn} onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             <span style={{ fontSize: 14 }}>🤍</span>
             {likedIds.length > 0 && <span style={{ background: '#f5e6c8', color: '#1a1209', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedIds.length}</span>}
           </button>
         </div>
       </div>
 
+      {/* Filters */}
       {showFilters && (
         <div style={{ background: '#241810', margin: '0 12px 8px', borderRadius: 10, padding: '12px 14px', border: '1px solid #3d3020' }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -416,7 +640,8 @@ export default function Catalogue() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px', paddingBottom: 100 }}>
+      {/* Card area */}
+      <div ref={refCardArea} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px', paddingBottom: 100 }}>
         {!current ? (
           <div style={{ textAlign: 'center', color: '#9e8a6a', padding: 40 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
@@ -431,54 +656,62 @@ export default function Catalogue() {
           <div style={{ width: '100%', maxWidth: 380, position: 'relative', height: 520 }}>
             {nextCard && (
               <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: 'scale(0.95) translateY(10px)', zIndex: 1 }}>
-                {getPhotos(nextCard)[0] ? <img src={getPhotos(nextCard)[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
+                {getPhotos(nextCard)[0]
+                  ? <img src={getPhotos(nextCard)[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
                   : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80, opacity: 0.3 }}>👕</div>}
               </div>
             )}
-            <div onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
+            <div
+              onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} onClick={onTap}
               style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none' }}>
-                  {photos.length > 0 ? <img src={photos[photoIdx]} alt={current.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} draggable={false} />
-                    : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100 }}>👕</div>}
-                  {photos.length > 1 && (
-                    <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
-                      {photos.map((_, i) => <div key={i} style={{ height: 3, width: i === photoIdx ? 20 : 6, borderRadius: 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'width 0.2s' }} />)}
-                    </div>
-                  )}
-                  {photos.length > 1 && (
-                    <>
-                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
-                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p + 1) % photos.length) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
-                    </>
-                  )}
-                  {likeOp > 0.1 && <div style={{ position: 'absolute', top: 32, left: 20, border: '3px solid #4CAF50', borderRadius: 6, padding: '4px 10px', opacity: likeOp, transform: 'rotate(-12deg)' }}><span style={{ color: '#4CAF50', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ME GUSTA</span></div>}
-                  {skipOp > 0.1 && <div style={{ position: 'absolute', top: 32, right: 20, border: '3px solid #ef5350', borderRadius: 6, padding: '4px 10px', opacity: skipOp, transform: 'rotate(12deg)' }}><span style={{ color: '#ef5350', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>PASAR</span></div>}
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', padding: '40px 16px 16px', pointerEvents: 'none' }}>
-                    <div style={{ fontFamily: "'Playfair Display', serif", color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Talla {current.size}</span>
-                      {currentColors.map(c => (
-                        <span key={c} style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
-                      ))}
-                      {currentColors.map(c => (
-                        <span key={c} style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block' }} />{c}
-                        </span>
-                      ))}
-                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
-                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {current.price}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>{photos.length > 1 ? 'Toca para cambiar foto' : 'Toca para ver detalles'}</div>
-                  </div>
+              {photos.length > 0
+                ? <img src={photos[photoIdx]} alt={current.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} draggable={false} />
+                : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100 }}>👕</div>}
+              {photos.length > 1 && (
+                <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
+                  {photos.map((_, i) => <div key={i} style={{ height: 3, width: i === photoIdx ? 20 : 6, borderRadius: 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'width 0.2s' }} />)}
+                </div>
+              )}
+              {photos.length > 1 && (
+                <>
+                  <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
+                  <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p + 1) % photos.length) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
+                </>
+              )}
+              {likeOp > 0.1 && <div style={{ position: 'absolute', top: 32, left: 20, border: '3px solid #4CAF50', borderRadius: 6, padding: '4px 10px', opacity: likeOp, transform: 'rotate(-12deg)' }}><span style={{ color: '#4CAF50', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ME GUSTA</span></div>}
+              {skipOp > 0.1 && <div style={{ position: 'absolute', top: 32, right: 20, border: '3px solid #ef5350', borderRadius: 6, padding: '4px 10px', opacity: skipOp, transform: 'rotate(12deg)' }}><span style={{ color: '#ef5350', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>PASAR</span></div>}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', padding: '40px 16px 16px', pointerEvents: 'none' }}>
+                <div style={{ fontFamily: "'Playfair Display', serif", color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Talla {current.size}</span>
+                  {currentColors.map(c => <span key={c} style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>)}
+                  {currentColors.map(c => (
+                    <span key={c} style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block' }} />{c}
+                    </span>
+                  ))}
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {current.price}</span>
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>{photos.length > 1 ? 'Toca para cambiar foto' : ''}</div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
+      {/* Action buttons */}
       {current && (
         <div style={{ position: 'fixed', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20, alignItems: 'center', zIndex: 10 }}>
-          <button onClick={doSkip} style={{ width: 56, height: 56, borderRadius: '50%', background: '#241810', border: '2px solid #ef5350', color: '#ef5350', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>✕</button>
-          <button onClick={doLike} style={{ width: 64, height: 64, borderRadius: '50%', background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', fontSize: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>♥</button>
+          <button ref={refSkipBtn} onClick={doSkip}
+            style={{ width: 56, height: 56, borderRadius: '50%', background: '#241810', border: '2px solid #ef5350', color: '#ef5350', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>✕</button>
+          <button ref={refLikeBtn} onClick={doLike}
+            style={{ width: 64, height: 64, borderRadius: '50%', background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', fontSize: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>♥</button>
         </div>
       )}
       {queue.length > 0 && current && (
@@ -488,7 +721,10 @@ export default function Catalogue() {
       )}
 
       {showOnboarding && (
-        <OnboardingTooltip mode="swipe" onDismiss={() => { setShowOnboarding(false); saveOnboarded() }} />
+        <SpotlightOnboarding
+          steps={swipeSteps}
+          onDone={() => { setShowOnboarding(false); saveOnboarded() }}
+        />
       )}
     </div>
   )
