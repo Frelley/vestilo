@@ -67,7 +67,7 @@ export default function Admin() {
   }
 
   async function handleBackfill() {
-    const pending = products.filter(p => !p.ai_tags && (p.photos?.length || p.photo_url))
+    const pending = products.filter(p => !p.ai_tags && p.status !== 'Vendido' && (p.photos?.length || p.photo_url))
     if (!pending.length) { show('Todos los productos ya tienen análisis IA'); return }
     setBackfilling(true)
     setBackfillProgress({ done: 0, total: pending.length })
@@ -188,7 +188,7 @@ export default function Admin() {
           >
             {backfilling
               ? `IA ${backfillProgress?.done}/${backfillProgress?.total}`
-              : `✦ IA ${products.filter(p => !p.ai_tags && (p.photos?.length || p.photo_url)).length}`
+              : `✦ IA ${products.filter(p => !p.ai_tags && p.status !== 'Vendido' && (p.photos?.length || p.photo_url)).length}`
             }
           </button>
           <div style={{ display: 'flex', gap: 4 }}>
