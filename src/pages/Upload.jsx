@@ -142,7 +142,7 @@ export default function Upload() {
         show('Producto actualizado')
         if (uploadedUrls[0]) {
           supabase.functions.invoke('analyze-product', {
-            body: { product_id: id, photo_url: uploadedUrls[0] }
+            body: { product_id: id, photo_urls: uploadedUrls.filter(Boolean) }
           }).catch(() => {})
         }
       } else {
@@ -158,7 +158,7 @@ export default function Upload() {
         show('Producto guardado')
         if (finalUrls[0]) {
           supabase.functions.invoke('analyze-product', {
-            body: { product_id: newProduct.id, photo_url: finalUrls[0] }
+            body: { product_id: newProduct.id, photo_urls: finalUrls.filter(Boolean) }
           }).catch(() => {})
         }
       }
