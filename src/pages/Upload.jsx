@@ -141,8 +141,10 @@ export default function Upload() {
         await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData, ...bundleData })
         show('Producto actualizado')
         if (uploadedUrls[0]) {
-          supabase.functions.invoke('analyze-product', {
-            body: { product_id: id, photo_urls: uploadedUrls.filter(Boolean) }
+          fetch('/api/analyze-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: id, photo_urls: uploadedUrls.filter(Boolean) })
           }).catch(() => {})
         }
       } else {
@@ -157,8 +159,10 @@ export default function Upload() {
         await updateProduct(newProduct.id, { photo_url: finalUrls[0] || null, photos: finalUrls })
         show('Producto guardado')
         if (finalUrls[0]) {
-          supabase.functions.invoke('analyze-product', {
-            body: { product_id: newProduct.id, photo_urls: finalUrls.filter(Boolean) }
+          fetch('/api/analyze-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: newProduct.id, photo_urls: finalUrls.filter(Boolean) })
           }).catch(() => {})
         }
       }
