@@ -161,6 +161,12 @@ export default function Product() {
               ))}
             </div>
 
+            {product.notes && (
+              <p style={{ fontSize: 14, color: '#6b5c45', lineHeight: 1.6, marginBottom: 16 }}>
+                {product.notes}
+              </p>
+            )}
+
             <div style={{ marginBottom: 20 }}>
               <span className="badge" style={{ background: st.bg, color: st.color, fontSize: 12 }}>
                 {product.status}
