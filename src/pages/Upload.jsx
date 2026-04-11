@@ -140,6 +140,11 @@ export default function Upload() {
       if (isEdit) {
         await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData, ...bundleData })
         show('Producto actualizado')
+        if (uploadedUrls[0]) {
+          supabase.functions.invoke('analyze-product', {
+            body: { product_id: id, photo_url: uploadedUrls[0] }
+          }).catch(() => {})
+        }
       } else {
         const { data: newProduct, error } = await addProduct({
           ...form, price: parseFloat(form.price), status: 'Disponible',
@@ -151,6 +156,11 @@ export default function Upload() {
         )
         await updateProduct(newProduct.id, { photo_url: finalUrls[0] || null, photos: finalUrls })
         show('Producto guardado')
+        if (finalUrls[0]) {
+          supabase.functions.invoke('analyze-product', {
+            body: { product_id: newProduct.id, photo_url: finalUrls[0] }
+          }).catch(() => {})
+        }
       }
       setTimeout(() => navigate('/admin'), 800)
     } catch (err) {
