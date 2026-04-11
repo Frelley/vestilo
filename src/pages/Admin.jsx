@@ -73,9 +73,9 @@ export default function Admin() {
     setBackfillProgress({ done: 0, total: pending.length })
     for (let i = 0; i < pending.length; i++) {
       const p = pending[i]
-      const photo = p.photos?.[0] || p.photo_url
+      const photos = p.photos?.length ? p.photos : p.photo_url ? [p.photo_url] : []
       await supabase.functions.invoke('analyze-product', {
-        body: { product_id: p.id, photo_url: photo }
+        body: { product_id: p.id, photo_urls: photos }
       }).catch(() => {})
       setBackfillProgress({ done: i + 1, total: pending.length })
     }
