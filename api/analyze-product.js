@@ -36,10 +36,11 @@ export default async function handler(req, res) {
             })),
             {
               type: 'text',
-              text: `Analiza estas fotos de una prenda de ropa para una tienda de segunda mano. Pueden incluir frente, espalda, etiqueta u otros ángulos.
+              text: `Analiza estas fotos de una prenda de ropa para una tienda de ropa de segunda mano. Pueden incluir frente, espalda, etiqueta u otros ángulos.
+Escribe como un vendedor entusiasta — resalta lo atractivo de la prenda. NO menciones desgaste, uso, manchas, defectos ni ningún aspecto negativo. Solo lo positivo.
 Responde SOLO con JSON válido, sin texto adicional:
 {
-  "description": "descripción natural en español de 2-3 oraciones para el listing",
+  "description": "descripción natural y atractiva en español de 2-3 oraciones para el listing",
   "tags": ["array", "de", "tags", "semánticos", "en", "español"]
 }
 Los tags deben cubrir: tipo de prenda, material (si visible en etiqueta o textura), corte/fit, paleta de colores, estética/estilo, ocasión, temporada. Entre 8-15 tags.`,
