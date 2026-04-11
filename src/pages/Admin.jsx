@@ -18,6 +18,8 @@ export default function Admin() {
   const [filterStatus, setFilterStatus] = useState('')
   const [view, setView]           = useState('grid')
   const [activeTab, setActiveTab] = useState('all')
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillProgress, setBackfillProgress] = useState(null)
 
   const { toast, show }                           = useToast()
   const { posterProduct, open: openPoster, close: closePoster } = usePosterModal()
@@ -62,6 +64,25 @@ export default function Admin() {
     }
     setProducts(prev => prev.map(p => p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p))
     show('Venta registrada ✓')
+  }
+
+  async function handleBackfill() {
+    const pending = products.filter(p => !p.ai_tags && (p.photos?.length || p.photo_url))
+    if (!pending.length) { show('Todos los productos ya tienen análisis IA'); return }
+    setBackfilling(true)
+    setBackfillProgress({ done: 0, total: pending.length })
+    for (let i = 0; i < pending.length; i++) {
+      const p = pending[i]
+      const photo = p.photos?.[0] || p.photo_url
+      await supabase.functions.invoke('analyze-product', {
+        body: { product_id: p.id, photo_url: photo }
+      }).catch(() => {})
+      setBackfillProgress({ done: i + 1, total: pending.length })
+    }
+    setBackfilling(false)
+    setBackfillProgress(null)
+    show(`Análisis IA completado para ${pending.length} productos`)
+    load()
   }
 
   async function handleDelete(id, name, size, label) {
@@ -157,6 +178,17 @@ export default function Admin() {
             <option>Vendido</option>
             <option>Reservado</option>
           </select>
+          <button
+            className="btn"
+            onClick={handleBackfill}
+            disabled={backfilling}
+            style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+          >
+            {backfilling
+              ? `IA ${backfillProgress?.done}/${backfillProgress?.total}`
+              : `✦ IA ${products.filter(p => !p.ai_tags && (p.photos?.length || p.photo_url)).length}`
+            }
+          </button>
           <div style={{ display: 'flex', gap: 4 }}>
             <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'grid' ? 700 : 400 }} onClick={() => setView('grid')}>⊞</button>
             <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'table' ? 700 : 400 }} onClick={() => setView('table')}>☰</button>
