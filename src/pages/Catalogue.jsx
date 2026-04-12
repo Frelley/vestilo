@@ -352,6 +352,9 @@ export default function Catalogue() {
   const [swipeDir, setSwipeDir]   = useState(null)
   const [photoIdx, setPhotoIdx]   = useState(0)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [searchQuery, setSearchQuery]     = useState('')
+  const [searchIds, setSearchIds]         = useState(null)   // null = no search active
+  const [isSearching, setIsSearching]     = useState(false)
 
   const dragRef = useRef(drag)
   dragRef.current = drag
@@ -383,12 +386,13 @@ export default function Catalogue() {
 
   useEffect(() => {
     const filtered = products.filter(p => {
+      if (searchIds !== null && !searchIds.includes(p.id)) return false
       if (filterSize && p.size !== filterSize) return false
       if (p.price > priceMax) return false
       return true
     })
     setQueue(filtered); setIndex(0); setPhotoIdx(0)
-  }, [filterSize, priceMax, products])
+  }, [filterSize, priceMax, products, searchIds])
 
   function pickMode(m) {
     setMode(m); saveMode(m)
@@ -406,6 +410,19 @@ export default function Catalogue() {
 
   const likedProducts = products.filter(p => likedIds.includes(p.id))
   const hasFilter     = filterSize || priceMax < maxPrice
+
+  async function doSearch(q) {
+    if (!q.trim()) { setSearchIds(null); return }
+    setIsSearching(true)
+    try {
+      const res = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q }) })
+      const data = await res.json()
+      setSearchIds(data.ids ?? [])
+    } catch { setSearchIds([]) }
+    setIsSearching(false)
+  }
+
+  function clearSearch() { setSearchQuery(''); setSearchIds(null) }
 
   // Onboarding steps per mode
   const swipeSteps = [
@@ -432,9 +449,37 @@ export default function Catalogue() {
 
   if (!mode) return <ModePicker onPick={pickMode} />
 
+  const searchBar = (isDark) => (
+    <div style={{ padding: '6px 12px 2px' }}>
+      <form onSubmit={e => { e.preventDefault(); doSearch(searchQuery) }} style={{ display: 'flex', gap: 6 }}>
+        <input
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Buscar con IA… ej: algo para el gym"
+          style={{ flex: 1, background: isDark ? '#241810' : '#fff', color: isDark ? '#f5e6c8' : '#1a1209', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', '::placeholder': { color: '#9e8a6a' } }}
+        />
+        {searchIds !== null ? (
+          <button type="button" onClick={clearSearch} style={{ background: isDark ? '#3d3020' : '#f0ede8', color: isDark ? '#f5e6c8' : '#1a1209', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            ✕ Limpiar
+          </button>
+        ) : (
+          <button type="submit" disabled={isSearching || !searchQuery.trim()} style={{ background: isDark ? '#f5e6c8' : '#1a1209', color: isDark ? '#1a1209' : '#f5e6c8', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', opacity: (!searchQuery.trim() || isSearching) ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+            {isSearching ? '…' : 'Buscar'}
+          </button>
+        )}
+      </form>
+      {searchIds !== null && (
+        <div style={{ fontSize: 11, color: '#9e8a6a', padding: '4px 4px 2px' }}>
+          {queue.length === 0 ? 'Sin resultados' : `${queue.length} resultado${queue.length !== 1 ? 's' : ''}`}
+        </div>
+      )}
+    </div>
+  )
+
   const filterBar = (
     <>
-      <div style={{ display: 'flex', gap: 8, padding: '8px 12px', alignItems: 'center', justifyContent: 'flex-end' }}>
+      {searchBar(false)}
+      <div style={{ display: 'flex', gap: 8, padding: '6px 12px', alignItems: 'center', justifyContent: 'flex-end' }}>
         <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#f5e6c8' : 'transparent', color: hasFilter ? '#1a1209' : '#9e8a6a', border: `1px solid ${hasFilter ? '#c4b9a8' : '#e8e0d4'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
           {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1209', display: 'inline-block' }} />}
           Filtros
@@ -548,6 +593,9 @@ export default function Catalogue() {
           </button>
         </div>
       </div>
+
+      {/* Search */}
+      {searchBar(true)}
 
       {/* Filters */}
       {showFilters && (
