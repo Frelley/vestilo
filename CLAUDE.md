@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v2.6 (next: v2.7)
+## Version: v2.7 (next: v2.8)
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -101,6 +101,7 @@ v2.3 (skipped)
 v2.4 (skipped)
 v2.5 Tap main product image cycles photos. Title updated to "Vestilo a tu sonso!" everywhere.
 v2.6 PosterModal: 1080x1080 social media poster generator with QR code, copy image, download, copy caption. ShareModal wired into Admin. Both 📤 WA and 🖼️ Poster buttons on every product card.
+v2.7 AI features: auto-analyze product photos on upload (Claude Sonnet), generates description (notes) + hidden ai_tags. Admin backfill button. AI search bar in Catalogue (both modes) via /api/search using Claude Haiku tag extraction + Supabase array overlap.
 
 ## Rules
 1. Read file before editing
