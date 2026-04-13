@@ -331,6 +331,15 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           </div>
         )}
       </div>
+
+      {/* Location / Pickup */}
+      <div style={{ textAlign: 'center', padding: '20px 16px 40px', borderTop: '1px solid #e8e0d4', marginTop: 4 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0ede8', borderRadius: 20, padding: '7px 16px', border: '1px solid #e8e0d4' }}>
+          <span style={{ fontSize: 14 }}>📍</span>
+          <span style={{ fontSize: 12, color: '#3d3020', fontWeight: 600 }}>Centro, calle Charcas · Santa Cruz</span>
+        </div>
+        <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 8 }}>Retiro disponible · Coordinar por WhatsApp</div>
+      </div>
     </div>
   )
 }
@@ -596,6 +605,11 @@ export default function Catalogue() {
 
       {/* Search */}
       {searchBar(true)}
+
+      {/* Location */}
+      <div style={{ textAlign: 'center', padding: '2px 0 4px' }}>
+        <span style={{ fontSize: 10, color: '#5a4a35', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro disponible</span>
+      </div>
 
       {/* Filters */}
       {showFilters && (
