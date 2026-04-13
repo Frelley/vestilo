@@ -360,6 +360,7 @@ export default function Catalogue() {
   const [drag, setDrag]           = useState({ active: false, x: 0, startX: 0, startY: 0 })
   const [swipeDir, setSwipeDir]   = useState(null)
   const [photoIdx, setPhotoIdx]   = useState(0)
+  const [flipped, setFlipped]     = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [searchQuery, setSearchQuery]     = useState('')
   const [searchIds, setSearchIds]         = useState(null)   // null = no search active
@@ -381,6 +382,7 @@ export default function Catalogue() {
 
   useEffect(() => { load() }, [])
   useEffect(() => { saveLiked(likedIds) }, [likedIds])
+  useEffect(() => { setFlipped(false) }, [index])
 
   async function load() {
     setLoading(true)
@@ -569,7 +571,7 @@ export default function Catalogue() {
   }
   function onTap() {
     if (Math.abs(dragRef.current.x) < 8) {
-      setPhotoIdx(p => (p + 1) % Math.max(photos.length, 1))
+      setFlipped(f => !f)
     }
   }
 
@@ -649,40 +651,80 @@ export default function Catalogue() {
                   : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80, opacity: 0.3 }}>👕</div>}
               </div>
             )}
+            {/* Drag wrapper — no overflow:hidden so 3D flip isn't clipped */}
             <div
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} onClick={onTap}
-              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none' }}>
-              {photos.length > 0
-                ? <img src={photos[photoIdx]} alt={current.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} draggable={false} />
-                : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100 }}>👕</div>}
-              {photos.length > 1 && (
-                <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
-                  {photos.map((_, i) => <div key={i} style={{ height: 3, width: i === photoIdx ? 20 : 6, borderRadius: 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'width 0.2s' }} />)}
+              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, background: 'transparent', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', perspective: 1000 }}>
+              {/* Flip inner */}
+              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, transformStyle: 'preserve-3d', transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.42s ease' }}>
+
+                {/* ── FRONT ── */}
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#241810' }}>
+                  {photos.length > 0
+                    ? <img src={photos[photoIdx]} alt={current.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} draggable={false} />
+                    : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100 }}>👕</div>}
+                  {photos.length > 1 && (
+                    <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
+                      {photos.map((_, i) => <div key={i} style={{ height: 3, width: i === photoIdx ? 20 : 6, borderRadius: 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'width 0.2s' }} />)}
+                    </div>
+                  )}
+                  {photos.length > 1 && (
+                    <>
+                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
+                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p + 1) % photos.length) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
+                    </>
+                  )}
+                  {likeOp > 0.1 && <div style={{ position: 'absolute', top: 32, left: 20, border: '3px solid #4CAF50', borderRadius: 6, padding: '4px 10px', opacity: likeOp, transform: 'rotate(-12deg)' }}><span style={{ color: '#4CAF50', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ME GUSTA</span></div>}
+                  {skipOp > 0.1 && <div style={{ position: 'absolute', top: 32, right: 20, border: '3px solid #ef5350', borderRadius: 6, padding: '4px 10px', opacity: skipOp, transform: 'rotate(12deg)' }}><span style={{ color: '#ef5350', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>PASAR</span></div>}
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', padding: '40px 16px 16px', pointerEvents: 'none' }}>
+                    <div style={{ fontFamily: "'Playfair Display', serif", color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Talla {current.size}</span>
+                      {currentColors.map(c => <span key={c} style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>)}
+                      {currentColors.map(c => (
+                        <span key={c} style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block' }} />{c}
+                        </span>
+                      ))}
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {current.price}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>Toca para ver descripción ↩</div>
+                  </div>
                 </div>
-              )}
-              {photos.length > 1 && (
-                <>
-                  <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
-                  <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p + 1) % photos.length) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
-                </>
-              )}
-              {likeOp > 0.1 && <div style={{ position: 'absolute', top: 32, left: 20, border: '3px solid #4CAF50', borderRadius: 6, padding: '4px 10px', opacity: likeOp, transform: 'rotate(-12deg)' }}><span style={{ color: '#4CAF50', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ME GUSTA</span></div>}
-              {skipOp > 0.1 && <div style={{ position: 'absolute', top: 32, right: 20, border: '3px solid #ef5350', borderRadius: 6, padding: '4px 10px', opacity: skipOp, transform: 'rotate(12deg)' }}><span style={{ color: '#ef5350', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>PASAR</span></div>}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', padding: '40px 16px 16px', pointerEvents: 'none' }}>
-                <div style={{ fontFamily: "'Playfair Display', serif", color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Talla {current.size}</span>
-                  {currentColors.map(c => <span key={c} style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>)}
-                  {currentColors.map(c => (
-                    <span key={c} style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block' }} />{c}
-                    </span>
-                  ))}
-                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
-                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {current.price}</span>
+
+                {/* ── BACK ── */}
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', background: '#1a1209', transform: 'rotateY(180deg)', display: 'flex', flexDirection: 'column', padding: '22px 20px 18px' }}>
+                  <div style={{ fontSize: 10, color: '#5a4a35', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Descripción</div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
+                  {current.cat && <span style={{ display: 'inline-block', alignSelf: 'flex-start', background: '#3d3020', color: '#c4b9a8', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', borderRadius: 4, padding: '3px 8px', marginBottom: 14 }}>{current.cat}</span>}
+                  <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
+                    {current.notes
+                      ? <p style={{ color: '#c4b9a8', fontSize: 14, lineHeight: 1.75, margin: 0 }}>{current.notes}</p>
+                      : <p style={{ color: '#5a4a35', fontSize: 13, fontStyle: 'italic', margin: 0 }}>Sin descripción</p>}
+                  </div>
+                  <div style={{ borderTop: '1px solid #3d3020', paddingTop: 14 }}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                      <span style={{ background: '#3d3020', color: '#f5e6c8', borderRadius: 6, padding: '5px 10px', fontSize: 12 }}>Talla {current.size}</span>
+                      <span style={{ background: '#3d3020', color: '#f5e6c8', borderRadius: 6, padding: '5px 10px', fontSize: 13, fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Bs. {current.price}</span>
+                      {currentColors.map(c => (
+                        <span key={c} style={{ background: '#3d3020', color: '#f5e6c8', borderRadius: 6, padding: '5px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block' }} />{c}
+                        </span>
+                      ))}
+                    </div>
+                    <a
+                      href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesa la camiseta *"${current.name}"* (Bs. ${current.price}, talla ${current.size}). ¿Está disponible?`)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+                      {WA_SVG} Preguntar por WhatsApp
+                    </a>
+                    <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11, color: '#5a4a35' }}>Toca para volver · Deslizá para decidir</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>{photos.length > 1 ? 'Toca para cambiar foto' : ''}</div>
+
               </div>
             </div>
           </div>
