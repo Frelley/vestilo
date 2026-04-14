@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v2.6 (next: v2.7)
+## Version: v2.9 (next: v3.0)
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -101,14 +101,17 @@ v2.3 (skipped)
 v2.4 (skipped)
 v2.5 Tap main product image cycles photos. Title updated to "Vestilo a tu sonso!" everywhere.
 v2.6 PosterModal: 1080x1080 social media poster generator with QR code, copy image, download, copy caption. ShareModal wired into Admin. Both 📤 WA and 🖼️ Poster buttons on every product card.
+v2.7 AI features: auto-analyze product photos on upload (Claude Sonnet), generates description (notes) + hidden ai_tags. Admin backfill button. AI search bar in Catalogue (both modes) via /api/search using Claude Haiku tag extraction + Supabase array overlap.
+v2.8 All prices set to 34.99 Bs (price column converted integer→numeric(10,2)). Location section added (Centro, calle Charcas) to both swipe and grid views. Swipe card flip: tap center = flip to back showing description, tags, WA button; tap sides = cycle photos.
 
 ## Rules
 1. Read file before editing
 2. No require() — top-level imports only
-3. Increment version each change (current v2.6, next v2.7)
+3. Increment version each change (current v2.8, next v2.9)
 4. No reused filenames for zips
 5. Color filter in Catalogue is ALWAYS soft sort, never hard filter
 6. New Supabase table/function → provide .sql file first
 7. Liked list stays in localStorage, no backend needed
-8. Deploy by pushing via GitHub API using Claude in Chrome extension
+8. Deploy: push via GitHub API using Claude in Chrome extension. Token is NOT stored anywhere — ask user to provide it or give them the file to replace manually.
 9. Poster uses product.notes as description text (not product.name which is auto-label)
+10. Repo has stale root-level duplicates (Catalogue.jsx, ShareModal.jsx, constants.js, node_modules/, vestilo-v1.1.zip) — harmless to build but should be cleaned up
