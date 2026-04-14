@@ -53,7 +53,7 @@ Responde SOLO con JSON válido:
     if (!tags?.length) return res.status(200).json({ tags: [], ids: [] })
 
     // Step 2: query Supabase for products whose ai_tags overlap
-    const tagsParam = `{${tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}`
+    const tagsParam = `{${tags.map(t => `"${t.replace(/\"/g, '\\"')}"`).join(',')}}`
     const sbRes = await fetch(
       `${supabaseUrl}/rest/v1/products?select=id&status=eq.Disponible&ai_tags=ov.${encodeURIComponent(tagsParam)}`,
       {

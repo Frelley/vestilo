@@ -140,6 +140,13 @@ export default function Upload() {
       if (isEdit) {
         await updateProduct(id, { ...form, price: parseFloat(form.price), ...photoData, ...bundleData })
         show('Producto actualizado')
+        if (uploadedUrls[0]) {
+          fetch('/api/analyze-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: id, photo_urls: uploadedUrls.filter(Boolean) })
+          }).catch(() => {})
+        }
       } else {
         const { data: newProduct, error } = await addProduct({
           ...form, price: parseFloat(form.price), status: 'Disponible',
@@ -151,6 +158,13 @@ export default function Upload() {
         )
         await updateProduct(newProduct.id, { photo_url: finalUrls[0] || null, photos: finalUrls })
         show('Producto guardado')
+        if (finalUrls[0]) {
+          fetch('/api/analyze-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: newProduct.id, photo_urls: finalUrls.filter(Boolean) })
+          }).catch(() => {})
+        }
       }
       setTimeout(() => navigate('/admin'), 800)
     } catch (err) {
