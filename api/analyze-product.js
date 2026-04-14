@@ -3,7 +3,7 @@ export const maxDuration = 30
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { product_id, photo_urls } = req.body
+  const { product_id, photo_urls, force } = req.body
   if (!product_id || !photo_urls?.length) {
     return res.status(400).json({ error: 'Missing product_id or photo_urls' })
   }
@@ -83,17 +83,18 @@ Los tags deben cubrir: tipo de prenda, material (si visible), corte/fit, colores
     ].filter(Boolean)
     const allTags = [...new Set([...parsed.tags, ...extraTags])]
 
-    // Only fill notes if currently empty
-    const checkRes = await fetch(`${supabaseUrl}/rest/v1/products?id=eq.${product_id}&select=notes`, {
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-    })
-    const [product] = await checkRes.json()
     const updateData = { ai_tags: allTags }
-    if (parsed.description && !product?.notes?.trim()) {
-      updateData.notes = parsed.description
+    if (parsed.description) {
+      if (force) {
+        updateData.notes = parsed.description
+      } else {
+        // Only fill notes if currently empty
+        const checkRes = await fetch(`${supabaseUrl}/rest/v1/products?id=eq.${product_id}&select=notes`, {
+          headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+        })
+        const [product] = await checkRes.json()
+        if (!product?.notes?.trim()) updateData.notes = parsed.description
+      }
     }
 
     await fetch(`${supabaseUrl}/rest/v1/products?id=eq.${product_id}`, {

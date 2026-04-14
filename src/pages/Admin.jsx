@@ -66,8 +66,8 @@ export default function Admin() {
     show('Venta registrada ✓')
   }
 
-  async function handleBackfill() {
-    const pending = products.filter(p => !p.ai_tags && p.status !== 'Vendido' && (p.photos?.length || p.photo_url))
+  async function handleBackfill(force = false) {
+    const pending = products.filter(p => p.status !== 'Vendido' && (p.photos?.length || p.photo_url) && (force || !p.ai_tags))
     if (!pending.length) { show('Todos los productos ya tienen análisis IA'); return }
     setBackfilling(true)
     setBackfillProgress({ done: 0, total: pending.length })
@@ -77,7 +77,7 @@ export default function Admin() {
       await fetch('/api/analyze-product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: p.id, photo_urls: photos })
+        body: JSON.stringify({ product_id: p.id, photo_urls: photos, force })
       }).catch(() => {})
       setBackfillProgress({ done: i + 1, total: pending.length })
     }
@@ -182,7 +182,7 @@ export default function Admin() {
           </select>
           <button
             className="btn"
-            onClick={handleBackfill}
+            onClick={() => handleBackfill(false)}
             disabled={backfilling}
             style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
           >
@@ -190,6 +190,15 @@ export default function Admin() {
               ? `IA ${backfillProgress?.done}/${backfillProgress?.total}`
               : `✦ IA ${products.filter(p => !p.ai_tags && p.status !== 'Vendido' && (p.photos?.length || p.photo_url)).length}`
             }
+          </button>
+          <button
+            className="btn"
+            onClick={() => handleBackfill(true)}
+            disabled={backfilling}
+            style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+            title="Regenerar descripciones con el nuevo estilo"
+          >
+            {backfilling ? `IA ${backfillProgress?.done}/${backfillProgress?.total}` : '↺ IA todo'}
           </button>
           <div style={{ display: 'flex', gap: 4 }}>
             <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'grid' ? 700 : 400 }} onClick={() => setView('grid')}>⊞</button>
