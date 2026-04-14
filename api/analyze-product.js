@@ -38,7 +38,7 @@ export default async function handler(req, res) {
               type: 'text',
               text: `Analiza estas fotos de una prenda de ropa para una tienda de ropa de segunda mano en Santa Cruz de la Sierra, Bolivia. Pueden incluir frente, espalda, etiqueta u otros ángulos.
 
-Escribe la descripción como una vendedora camba de Santa Cruz con humor y personalidad — usa slang local (re linda, grosa, pinta, a full, ficha, bacán, papicho, etc.), algún chiste suave o comentario pícaro sobre lo bien que va a quedar la prenda, y energía de chica que vende por WhatsApp. Si detectas la marca en la etiqueta, mencionala. NO menciones desgaste, uso, manchas ni defectos. Solo lo positivo y con onda.
+Escribe la descripción con la personalidad de una chica camba de Santa Cruz que vende por WhatsApp — espontánea, con humor, un poco pícara, como hablando con una amiga. El slang debe salir natural, no forzado: a veces es una expresión local, a veces un chiste sobre la ocasión, a veces solo entusiasmo genuino. Varía el tono en cada prenda — no repitas las mismas palabras de siempre. Si detectas la marca en la etiqueta, mencionala. NO menciones desgaste, uso, manchas ni defectos. Solo lo positivo.
 
 Responde SOLO con JSON válido, sin texto adicional:
 {
