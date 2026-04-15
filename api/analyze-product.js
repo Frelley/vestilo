@@ -1,3 +1,5 @@
+import { CANONICAL_TAGS, toCanonicalTags } from './tags.js'
+
 export const maxDuration = 30
 
 export default async function handler(req, res) {
@@ -44,12 +46,14 @@ Responde SOLO con JSON válido, sin texto adicional:
 {
   "description": "descripción atractiva en español con tono camba de 2-3 oraciones, mencionando la marca si se detecta",
   "brand": "nombre de la marca si es visible en etiqueta, o null",
-  "colors": ["colores dominantes de esta lista exacta: Negro, Blanco, Gris, Azul, Rojo, Verde, Café, Amarillo, Rosa, Morado, Naranja, Multicolor"],
-  "aesthetic": ["2-4 etiquetas de estética/tendencia: Y2K, vintage, streetwear, boho, minimalista, cottagecore, coquette, preppy, sporty, elegante, casual, etc."],
+  "colors": ["colores de esta lista exacta: negro, blanco, gris, azul, azul-marino, rojo, verde, amarillo, cafe, naranja, rosa, morado, multicolor, beige, crema"],
+  "aesthetic": ["2-4 etiquetas de estética de esta lista: vintage, streetwear, y2k, boho, minimalista, cottagecore, coquette, preppy, sporty, elegante, casual, retro, grunge, punk, rock, hipster, urbano, formal, semi-formal"],
   "gender": "mujer, hombre, o unisex",
-  "tags": ["array de tags semánticos en español"]
+  "tags": ["8-15 tags de la lista canónica que describe la prenda"]
 }
-Los tags deben cubrir: tipo de prenda, material (si visible), corte/fit, colores, estética, ocasión, temporada, marca si aplica. Entre 8-15 tags.`,
+
+Los tags deben ser ÚNICAMENTE palabras de esta lista canónica (elige los más relevantes):
+${CANONICAL_TAGS.join(', ')}`,
             },
           ],
         }],
@@ -74,14 +78,16 @@ Los tags deben cubrir: tipo de prenda, material (si visible), corte/fit, colores
       return res.status(500).json({ error: 'Parse failed', raw: text })
     }
 
-    // Merge aesthetic, gender, colors and brand into ai_tags for searchability
-    const extraTags = [
+    // Merge all fields and normalize to canonical vocabulary
+    const rawTags = [
+      ...(parsed.tags || []),
       ...(parsed.aesthetic || []),
       ...(parsed.colors || []),
       parsed.gender || null,
       parsed.brand || null,
     ].filter(Boolean)
-    const allTags = [...new Set([...parsed.tags, ...extraTags])]
+
+    const allTags = toCanonicalTags(rawTags)
 
     const updateData = { ai_tags: allTags }
     if (parsed.description) {

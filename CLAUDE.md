@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v2.9 (next: v3.0)
+## Version: v2.9 (next: v3.0) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -103,11 +103,12 @@ v2.5 Tap main product image cycles photos. Title updated to "Vestilo a tu sonso!
 v2.6 PosterModal: 1080x1080 social media poster generator with QR code, copy image, download, copy caption. ShareModal wired into Admin. Both 📤 WA and 🖼️ Poster buttons on every product card.
 v2.7 AI features: auto-analyze product photos on upload (Claude Sonnet), generates description (notes) + hidden ai_tags. Admin backfill button. AI search bar in Catalogue (both modes) via /api/search using Claude Haiku tag extraction + Supabase array overlap.
 v2.8 All prices set to 34.99 Bs (price column converted integer→numeric(10,2)). Location section added (Centro, calle Charcas) to both swipe and grid views. Swipe card flip: tap center = flip to back showing description, tags, WA button; tap sides = cycle photos.
+v2.9 Shared tag dictionary (api/tags.js): canonical vocabulary, synonym map, semantic groups, Levenshtein fuzzy matching. analyze-product now pins Claude to canonical tags + post-processes output. search now tries pure-JS extraction first (no API call for simple queries), Haiku fallback for ambiguous queries, scored Supabase RPC for relevance-ordered results. Run api/search_products_scored.sql in Supabase.
 
 ## Rules
 1. Read file before editing
 2. No require() — top-level imports only
-3. Increment version each change (current v2.8, next v2.9)
+3. Increment version each change (current v2.9, next v3.0)
 4. No reused filenames for zips
 5. Color filter in Catalogue is ALWAYS soft sort, never hard filter
 6. New Supabase table/function → provide .sql file first

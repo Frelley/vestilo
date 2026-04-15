@@ -1,3 +1,5 @@
+import { extractTagsFromQuery, toCanonicalTags, expandWithSemantic } from './tags.js'
+
 export const maxDuration = 15
 
 export default async function handler(req, res) {
@@ -15,56 +17,65 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Step 1: extract semantic tags from the query using Claude Haiku
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 256,
-        messages: [{
-          role: 'user',
-          content: `Eres un asistente de búsqueda de ropa. El usuario busca: "${query}"
-Extrae entre 3 y 8 tags de búsqueda en español que describan lo que busca. Los tags deben ser palabras sueltas o frases cortas que podrían coincidir con las etiquetas de una prenda de ropa: tipo de prenda, color, estilo, ocasión, fit, material, temporada.
+    // ── Step 1: try pure-JS tag extraction (free, instant, deterministic) ──
+    let tags = extractTagsFromQuery(query)
+
+    // ── Step 2: if too few matches, fall back to Claude Haiku ───────────────
+    if (tags.length < 3) {
+      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 256,
+          messages: [{
+            role: 'user',
+            content: `Eres un asistente de búsqueda de ropa. El usuario busca: "${query}"
+Extrae entre 3 y 8 tags en español que describan lo que busca. Deben ser palabras sueltas o frases cortas: tipo de prenda, color, estilo, ocasión, fit, material, temporada. Sin preposiciones ni artículos.
 Responde SOLO con JSON válido:
 {"tags": ["tag1", "tag2", "tag3"]}`,
-        }],
-      }),
-    })
+          }],
+        }),
+      })
 
-    const claudeData = await claudeRes.json()
-    if (!claudeRes.ok) {
-      return res.status(500).json({ error: 'Claude API error', details: claudeData })
-    }
+      const claudeData = await claudeRes.json()
+      if (claudeRes.ok) {
+        const text = claudeData.content?.[0]?.text
+        let haikuTags = []
+        try {
+          haikuTags = JSON.parse(text).tags
+        } catch {
+          const match = text?.match(/\{[\s\S]*\}/)
+          if (match) try { haikuTags = JSON.parse(match[0]).tags } catch {}
+        }
 
-    const text = claudeData.content?.[0]?.text
-    let tags = []
-    try {
-      tags = JSON.parse(text).tags
-    } catch {
-      const match = text?.match(/\{[\s\S]*\}/)
-      if (match) try { tags = JSON.parse(match[0]).tags } catch {}
+        if (haikuTags?.length) {
+          // Normalize Haiku output through the canonical dictionary,
+          // then expand with semantic groups
+          const canonical = toCanonicalTags(haikuTags)
+          tags = expandWithSemantic(canonical)
+        }
+      }
     }
 
     if (!tags?.length) return res.status(200).json({ tags: [], ids: [] })
 
-    // Step 2: query Supabase for products whose ai_tags overlap
-    const tagsParam = `{${tags.map(t => `"${t.replace(/\"/g, '\\"')}"`).join(',')}}`
-    const sbRes = await fetch(
-      `${supabaseUrl}/rest/v1/products?select=id&status=eq.Disponible&ai_tags=ov.${encodeURIComponent(tagsParam)}`,
-      {
-        headers: {
-          apikey: serviceRoleKey,
-          Authorization: `Bearer ${serviceRoleKey}`,
-        },
-      }
-    )
+    // ── Step 3: scored Supabase RPC — returns ids ordered by match count ────
+    const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/search_products_scored`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ search_tags: tags }),
+    })
 
-    const rows = await sbRes.json()
+    const rows = await rpcRes.json()
     const ids = Array.isArray(rows) ? rows.map(r => r.id) : []
 
     return res.status(200).json({ tags, ids })
