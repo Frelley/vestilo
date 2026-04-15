@@ -469,13 +469,12 @@ export default function Catalogue() {
           placeholder="Buscar con IA… ej: algo para el gym"
           style={{ flex: 1, background: isDark ? '#241810' : '#fff', color: isDark ? '#f5e6c8' : '#1a1209', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', '::placeholder': { color: '#9e8a6a' } }}
         />
-        {searchIds !== null ? (
-          <button type="button" onClick={clearSearch} style={{ background: isDark ? '#3d3020' : '#f0ede8', color: isDark ? '#f5e6c8' : '#1a1209', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            ✕ Limpiar
-          </button>
-        ) : (
-          <button type="submit" disabled={isSearching || !searchQuery.trim()} style={{ background: isDark ? '#f5e6c8' : '#1a1209', color: isDark ? '#1a1209' : '#f5e6c8', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', opacity: (!searchQuery.trim() || isSearching) ? 0.5 : 1, whiteSpace: 'nowrap' }}>
-            {isSearching ? '…' : 'Buscar'}
+        <button type="submit" disabled={isSearching || !searchQuery.trim()} style={{ background: isDark ? '#f5e6c8' : '#1a1209', color: isDark ? '#1a1209' : '#f5e6c8', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', opacity: (!searchQuery.trim() || isSearching) ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+          {isSearching ? '…' : 'Buscar'}
+        </button>
+        {searchIds !== null && (
+          <button type="button" onClick={clearSearch} style={{ background: 'transparent', color: isDark ? '#9e8a6a' : '#9e8a6a', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            ✕
           </button>
         )}
       </form>
