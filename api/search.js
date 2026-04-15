@@ -1,4 +1,4 @@
-import { CANONICAL_TAGS, extractTagsFromQuery, toCanonicalTags, expandWithSemantic } from './tags.js'
+import { CANONICAL_TAGS, extractTagsFromQuery, toCanonicalTags, getExcludeTags } from './tags.js'
 
 export const maxDuration = 15
 
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
           messages: [{
             role: 'user',
             content: `Eres un asistente de búsqueda de ropa. El usuario busca: "${query}"
-De esta lista de tags, selecciona entre 3 y 8 que mejor describan lo que busca. Interpreta la intención — por ejemplo "sin diseño" = liso, "para salir" = noche/fiesta, "abrigada" = invierno.
+De esta lista de tags, selecciona entre 3 y 5 tags MÁS ESPECÍFICOS Y REPRESENTATIVOS que describan la búsqueda. Interpreta la intención: "sin diseño" = liso, "para salir" = noche/fiesta, "abrigada" = invierno. Prioriza tags que diferencian la búsqueda (ej: liso, estampado, oversize, vintage). Evita tags genéricos que casi toda prenda tiene (ej: casual, manga-corta, cuello-redondo).
 Tags disponibles: ${CANONICAL_TAGS.join(', ')}
 Responde SOLO con JSON válido:
 {"tags": ["tag1", "tag2", "tag3"]}`,
@@ -53,10 +53,8 @@ Responde SOLO con JSON válido:
           const match = text?.match(/\{[\s\S]*\}/)
           if (match) try { haikuTags = JSON.parse(match[0]).tags } catch {}
         }
-
         if (haikuTags?.length) {
-          // Normalize through canonical dictionary only — no semantic expansion.
-          // Haiku already understands context; expansion would dilute precision.
+          // No semantic expansion — Haiku already understands context
           tags = toCanonicalTags(haikuTags)
         }
       }
@@ -64,20 +62,37 @@ Responde SOLO con JSON válido:
 
     if (!tags?.length) return res.status(200).json({ tags: [], ids: [] })
 
-    // ── Step 3: scored Supabase RPC — returns ids ordered by match count ────
-    const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/search_products_scored`, {
-      method: 'POST',
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ search_tags: tags }),
-    })
+    // ── Step 3: compute antonym exclusions ──────────────────────────────────
+    const excludeTags = getExcludeTags(tags)
+    const exclParam = excludeTags.length > 0
+      ? encodeURIComponent(`{${excludeTags.map(t => `"${t}"`).join(',')}}`)
+      : null
+
+    // ── Step 4: parallel — scored results + exclusion IDs ───────────────────
+    const [rpcRes, exclRes] = await Promise.all([
+      fetch(`${supabaseUrl}/rest/v1/rpc/search_products_scored`, {
+        method: 'POST',
+        headers: {
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ search_tags: tags }),
+      }),
+      exclParam
+        ? fetch(`${supabaseUrl}/rest/v1/products?select=id&status=eq.Disponible&ai_tags=ov.${exclParam}`, {
+            headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+          })
+        : Promise.resolve(null),
+    ])
 
     const rows = await rpcRes.json()
-    // Require at least 2 tag matches to avoid single-tag coincidental hits
-    const ids = Array.isArray(rows) ? rows.filter(r => r.score >= 2).map(r => r.id) : []
+    const exclRows = exclRes ? await exclRes.json() : []
+    const excludeIds = new Set(Array.isArray(exclRows) ? exclRows.map(r => r.id) : [])
+
+    const ids = Array.isArray(rows)
+      ? rows.filter(r => r.score >= 2 && !excludeIds.has(r.id)).map(r => r.id)
+      : []
 
     return res.status(200).json({ tags, ids })
   } catch (err) {

@@ -557,6 +557,63 @@ export const SEMANTIC_GROUPS = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ANTONYMS — tags that cannot coexist with a search tag
+// If the user searches for X, products tagged with X's antonyms are excluded.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const ANTONYMS = {
+  // Pattern — liso means NO design whatsoever
+  liso: [
+    'estampado', 'grafico', 'bordado', 'tie-dye', 'floral', 'animal-print',
+    'camuflaje', 'lettering', 'mensaje', 'texto', 'banda', 'musical',
+    'logotipo', 'geometrico', 'abstracto', 'paisley', 'rayas', 'franjas',
+  ],
+  // Pattern — if searching for specific designs, exclude liso
+  estampado:    ['liso'],
+  grafico:      ['liso'],
+  bordado:      ['liso'],
+  'tie-dye':    ['liso'],
+  floral:       ['liso'],
+  'animal-print': ['liso'],
+
+  // Fit
+  oversize:   ['slim-fit', 'ajustado', 'entallado', 'justo'],
+  'slim-fit': ['oversize', 'holgado', 'wide', 'boxy'],
+  ajustado:   ['oversize', 'holgado', 'wide', 'boxy'],
+  holgado:    ['slim-fit', 'ajustado', 'entallado'],
+
+  // Sleeves
+  'manga-larga': ['manga-corta', 'sin-mangas', 'tirantes'],
+  'manga-corta': ['manga-larga'],
+  'sin-mangas':  ['manga-larga'],
+  tirantes:      ['manga-larga'],
+
+  // Gender
+  hombre: ['mujer', 'femenino'],
+  mujer:  ['hombre', 'masculino'],
+
+  // Season
+  invierno: ['verano', 'fresco', 'caliente'],
+  verano:   ['invierno', 'abrigado', 'frio'],
+}
+
+/**
+ * Given a set of search tags, return tags that should be EXCLUDED from results.
+ * Products containing any of these tags are filtered out.
+ */
+export function getExcludeTags(searchTags) {
+  const excluded = new Set()
+  for (const tag of searchTags) {
+    for (const antonym of (ANTONYMS[tag] || [])) {
+      excluded.add(antonym)
+    }
+  }
+  // Never exclude a tag that's also being searched (avoid contradictions)
+  for (const tag of searchTags) excluded.delete(tag)
+  return [...excluded]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -706,9 +763,9 @@ export function suggestTags(query, limit = 10) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default {
-  CANONICAL_TAGS, SYNONYMS, SEMANTIC_GROUPS,
+  CANONICAL_TAGS, SYNONYMS, SEMANTIC_GROUPS, ANTONYMS,
   normalizeTag, toCanonical, toCanonicalTags,
-  expandWithSemantic, extractTagsFromQuery,
+  expandWithSemantic, extractTagsFromQuery, getExcludeTags,
   calculateMatchScore, filterByTags, suggestTags,
-  TAGS_VERSION: '2.0.0',
+  TAGS_VERSION: '2.1.0',
 }
