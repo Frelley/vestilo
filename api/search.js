@@ -1,4 +1,4 @@
-import { extractTagsFromQuery, toCanonicalTags, expandWithSemantic } from './tags.js'
+import { CANONICAL_TAGS, extractTagsFromQuery, toCanonicalTags, expandWithSemantic } from './tags.js'
 
 export const maxDuration = 15
 
@@ -35,7 +35,8 @@ export default async function handler(req, res) {
           messages: [{
             role: 'user',
             content: `Eres un asistente de búsqueda de ropa. El usuario busca: "${query}"
-Extrae entre 3 y 8 tags en español que describan lo que busca. Deben ser palabras sueltas o frases cortas: tipo de prenda, color, estilo, ocasión, fit, material, temporada. Sin preposiciones ni artículos.
+De esta lista de tags, selecciona entre 3 y 8 que mejor describan lo que busca. Interpreta la intención — por ejemplo "sin diseño" = liso, "para salir" = noche/fiesta, "abrigada" = invierno.
+Tags disponibles: ${CANONICAL_TAGS.join(', ')}
 Responde SOLO con JSON válido:
 {"tags": ["tag1", "tag2", "tag3"]}`,
           }],
