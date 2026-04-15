@@ -55,10 +55,9 @@ Responde SOLO con JSON válido:
         }
 
         if (haikuTags?.length) {
-          // Normalize Haiku output through the canonical dictionary,
-          // then expand with semantic groups
-          const canonical = toCanonicalTags(haikuTags)
-          tags = expandWithSemantic(canonical)
+          // Normalize through canonical dictionary only — no semantic expansion.
+          // Haiku already understands context; expansion would dilute precision.
+          tags = toCanonicalTags(haikuTags)
         }
       }
     }
@@ -77,7 +76,8 @@ Responde SOLO con JSON válido:
     })
 
     const rows = await rpcRes.json()
-    const ids = Array.isArray(rows) ? rows.map(r => r.id) : []
+    // Require at least 2 tag matches to avoid single-tag coincidental hits
+    const ids = Array.isArray(rows) ? rows.filter(r => r.score >= 2).map(r => r.id) : []
 
     return res.status(200).json({ tags, ids })
   } catch (err) {
