@@ -15,8 +15,7 @@
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
 
 ## Deploy method
-No local git setup. Edit files directly on GitHub in the browser → Vercel auto-deploys.
-Claude in Chrome extension can push files via GitHub API using a classic token (repo scope).
+`git push` from PowerShell/CMD → Vercel auto-deploys in ~2 min. (Claude in Chrome extension also works via GitHub API if needed.)
 
 ## File structure
 src/
