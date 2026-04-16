@@ -94,6 +94,18 @@ Responde SOLO con JSON válido:
       ? rows.filter(r => r.score >= 2 && !excludeIds.has(r.id)).map(r => r.id)
       : []
 
+    // Log the search — fire-and-forget, non-fatal
+    fetch(`${supabaseUrl}/rest/v1/search_logs`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ query, tags, result_count: ids.length }),
+    }).catch(() => {})
+
     return res.status(200).json({ tags, ids })
   } catch (err) {
     return res.status(500).json({ error: err.message })

@@ -9,6 +9,19 @@ const MODE_KEY        = 'vestilo-mode'
 const ONBOARDING_KEY    = 'vestilo-onboarded'
 const WA_ONBOARDING_KEY = 'vestilo-wa-onboarded'
 
+const SEARCH_SUGGESTIONS = [
+  'algo para el gym',
+  'camiseta negra oversize',
+  'algo para salir de noche',
+  'básica blanca sin diseño',
+  'estampado vintage',
+  'ropa fresca de verano',
+  'estilo urbano streetwear',
+  'manga larga abrigada',
+  'colores vivos y llamativos',
+  'algo minimalista',
+]
+
 function getOnboarded()    { try { return localStorage.getItem(ONBOARDING_KEY) === '1' } catch { return false } }
 function saveOnboarded()   { try { localStorage.setItem(ONBOARDING_KEY, '1') } catch {} }
 function getWaOnboarded()  { try { return localStorage.getItem(WA_ONBOARDING_KEY) === '1' } catch { return false } }
@@ -365,6 +378,14 @@ export default function Catalogue() {
   const [searchQuery, setSearchQuery]     = useState('')
   const [searchIds, setSearchIds]         = useState(null)   // null = no search active
   const [isSearching, setIsSearching]     = useState(false)
+  const [searchFocused, setSearchFocused] = useState(false)
+  const [suggIdx, setSuggIdx]             = useState(0)
+
+  useEffect(() => {
+    if (searchQuery) return
+    const t = setInterval(() => setSuggIdx(i => (i + 1) % SEARCH_SUGGESTIONS.length), 3000)
+    return () => clearInterval(t)
+  }, [searchQuery])
 
   const dragRef = useRef(drag)
   dragRef.current = drag
@@ -463,12 +484,22 @@ export default function Catalogue() {
   const searchBar = (isDark) => (
     <div style={{ padding: '6px 12px 2px' }}>
       <form onSubmit={e => { e.preventDefault(); doSearch(searchQuery) }} style={{ display: 'flex', gap: 6 }}>
-        <input
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Buscar con IA… ej: algo para el gym"
-          style={{ flex: 1, background: isDark ? '#241810' : '#fff', color: isDark ? '#f5e6c8' : '#1a1209', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', '::placeholder': { color: '#9e8a6a' } }}
-        />
+        <div style={{ flex: 1, position: 'relative' }}>
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            placeholder=""
+            style={{ width: '100%', background: isDark ? '#241810' : '#fff', color: isDark ? '#f5e6c8' : '#1a1209', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }}
+          />
+          {!searchQuery && !searchFocused && (
+            <div key={suggIdx} className="search-suggestion" style={{ color: isDark ? '#6b5a44' : '#b0a090' }}>
+              <span style={{ color: isDark ? '#9e8a6a' : '#9e8a6a' }}>Buscar con IA… </span>
+              <span>ej: {SEARCH_SUGGESTIONS[suggIdx]}</span>
+            </div>
+          )}
+        </div>
         <button type="submit" disabled={isSearching || !searchQuery.trim()} style={{ background: isDark ? '#f5e6c8' : '#1a1209', color: isDark ? '#1a1209' : '#f5e6c8', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', opacity: (!searchQuery.trim() || isSearching) ? 0.5 : 1, whiteSpace: 'nowrap' }}>
           {isSearching ? '…' : 'Buscar'}
         </button>

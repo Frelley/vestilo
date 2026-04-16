@@ -10,6 +10,115 @@ import { PosterModal, usePosterModal } from '../components/PosterModal.jsx'
 import { ShareModal, useShareModal } from '../components/ShareModal.jsx'
 import { SellModal, useSellModal } from '../components/SellModal.jsx'
 
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000)
+  if (s < 60)    return 'ahora'
+  if (s < 3600)  return `${Math.floor(s / 60)}m`
+  if (s < 86400) return `${Math.floor(s / 3600)}h`
+  return `${Math.floor(s / 86400)}d`
+}
+
+function SearchLog() {
+  const [logs, setLogs]       = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.from('search_logs').select('*').order('created_at', { ascending: false }).limit(300)
+      .then(({ data }) => { setLogs(data || []); setLoading(false) })
+  }, [])
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
+
+  const now       = new Date()
+  const dayStart  = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const weekStart = new Date(dayStart.getTime() - 6 * 24 * 60 * 60 * 1000)
+
+  const todayLogs = logs.filter(l => new Date(l.created_at) >= dayStart)
+  const weekLogs  = logs.filter(l => new Date(l.created_at) >= weekStart)
+  const zeroRate  = logs.length ? Math.round((logs.filter(l => l.result_count === 0).length / logs.length) * 100) : 0
+
+  // Top queries by frequency
+  const freq = {}
+  logs.forEach(l => { freq[l.query] = (freq[l.query] || 0) + 1 })
+  const topQueries = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 12)
+
+  return (
+    <div style={{ padding: 16, maxWidth: 720 }}>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
+        {[
+          ['Hoy',        todayLogs.length, '#1a1209'],
+          ['Esta semana', weekLogs.length, '#2e7d32'],
+          ['Total',       logs.length,     '#9e8a6a'],
+          ['Sin resultados', `${zeroRate}%`, zeroRate > 30 ? '#c62828' : '#9e8a6a'],
+        ].map(([label, val, color]) => (
+          <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px', borderTop: `3px solid ${color}` }}>
+            <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Top queries */}
+      {topQueries.length > 0 && (
+        <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Búsquedas más frecuentes</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {topQueries.map(([query, count], i) => (
+              <div key={query} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 11, color: '#c4b9a8', width: 16, textAlign: 'right' }}>{i + 1}</span>
+                <div style={{ flex: 1, background: '#f0ede8', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', background: '#1a1209', width: `${Math.round((count / topQueries[0][1]) * 100)}%`, borderRadius: 4 }} />
+                </div>
+                <span style={{ fontSize: 13, color: '#1a1209', flex: 2 }}>{query}</span>
+                <span style={{ fontSize: 12, color: '#9e8a6a', fontWeight: 600 }}>×{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent log */}
+      <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8e0d4', fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1 }}>Historial reciente</div>
+        {logs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: '#9e8a6a', fontSize: 13 }}>Aún no hay búsquedas registradas</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: '#faf8f5' }}>
+                  {['Búsqueda', 'Tags', 'Resultados', 'Hace'].map(h => (
+                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600, borderBottom: '1px solid #e8e0d4', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((l, i) => (
+                  <tr key={l.id} style={{ borderBottom: i < logs.length - 1 ? '1px solid #f0ede8' : 'none' }}>
+                    <td style={{ padding: '8px 12px', color: '#1a1209', fontWeight: 500 }}>{l.query}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {(l.tags || []).map(t => (
+                          <span key={t} style={{ fontSize: 10, background: '#f0ede8', color: '#3d3020', borderRadius: 4, padding: '2px 6px' }}>{t}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={{ padding: '8px 12px' }}>
+                      <span style={{ fontWeight: 600, color: l.result_count === 0 ? '#c62828' : '#2e7d32' }}>{l.result_count}</span>
+                    </td>
+                    <td style={{ padding: '8px 12px', color: '#9e8a6a', whiteSpace: 'nowrap' }}>{timeAgo(l.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const [products, setProducts]   = useState([])
   const [swipeStats, setSwipeStats] = useState({})
@@ -157,12 +266,13 @@ export default function Admin() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, padding: '0 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', overflowX: 'auto' }}>
         {[
-          ['all',       'Todos'],
-          ['available', 'Disponibles'],
-          ['popular',   'Más gustados'],
-          ['sold',      'Vendidos'],
-          ['old',       '+30 días'],
-          ['bundles',   '📦 Lotes'],
+          ['all',      'Todos'],
+          ['available','Disponibles'],
+          ['popular',  'Más gustados'],
+          ['sold',     'Vendidos'],
+          ['old',      '+30 días'],
+          ['bundles',  '📦 Lotes'],
+          ['searches', '🔍 Búsquedas'],
         ].map(([key, label]) => (
           <button key={key} style={tabStyle(key)} onClick={() => { setActiveTab(key); setFilterStatus('') }}>
             {label}
@@ -170,8 +280,8 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* Toolbar — hidden on Bundles tab */}
-      {activeTab !== 'bundles' && (
+      {/* Toolbar — hidden on Bundles and Searches tabs */}
+      {activeTab !== 'bundles' && activeTab !== 'searches' && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Buscar por nombre, talla, etiqueta…" value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 140 }} />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ width: 'auto' }}>
@@ -213,7 +323,9 @@ export default function Admin() {
       <SellModal   product={sellProduct}   onClose={closeSell} onSold={handleSold} />
 
       {/* Content */}
-      {activeTab === 'bundles' ? (
+      {activeTab === 'searches' ? (
+        <SearchLog />
+      ) : activeTab === 'bundles' ? (
         <BundleManager />
       ) : loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>

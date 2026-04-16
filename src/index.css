@@ -204,3 +204,21 @@ button { cursor: pointer; }
   .action-btn:hover { transform: scale(1.1); }
 }
 .action-btn:active { transform: scale(0.91) !important; transition-duration: 0.08s; }
+
+/* Rotating search suggestion overlay */
+.search-suggestion {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: calc(100% - 16px);
+  animation: sugg-fade 0.4s ease;
+}
+@keyframes sugg-fade {
+  from { opacity: 0; transform: translateY(calc(-50% + 5px)); }
+  to   { opacity: 1; transform: translateY(-50%); }
+}
