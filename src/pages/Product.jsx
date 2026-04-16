@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { WA_NUMBER, COLOR_DOTS, STATUS_STYLES, waMessage, colorsArray } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
+import CartHeart from '../components/CartHeart.jsx'
 
 const STORAGE_KEY = 'vestilo-liked'
 function getLiked() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] } }
@@ -80,7 +81,7 @@ export default function Product() {
               transition: 'all 0.15s',
             }}
           >
-            {isLiked ? '❤️' : '🤍'} {isLiked ? 'Guardado' : 'Guardar'}
+            <CartHeart liked={isLiked} size={18} /> {isLiked ? 'Guardado' : 'Guardar'}
           </button>
         </div>
 

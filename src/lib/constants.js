@@ -16,6 +16,7 @@ export const STATUS_STYLES = {
   Disponible: { bg: '#e8f5e9', color: '#2e7d32' },
   Vendido:    { bg: '#ffebee', color: '#c62828' },
   Reservado:  { bg: '#fff3e0', color: '#e65100' },
+  Archivado:  { bg: '#f0ede8', color: '#9e8a6a' },
 }
 
 export function daysSince(dateStr) {

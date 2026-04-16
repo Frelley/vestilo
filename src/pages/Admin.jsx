@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getProducts, updateProduct, deleteProduct, freeLabel, supabase } from '../lib/supabase.js'
+import CartHeart from '../components/CartHeart.jsx'
 import { STATUS_STYLES, daysSince, formatDate, colorsArray } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import ProductCard from '../components/ProductCard.jsx'
@@ -37,14 +38,12 @@ function SearchLog() {
   const weekLogs  = logs.filter(l => new Date(l.created_at) >= weekStart)
   const zeroRate  = logs.length ? Math.round((logs.filter(l => l.result_count === 0).length / logs.length) * 100) : 0
 
-  // Top queries by frequency
   const freq = {}
   logs.forEach(l => { freq[l.query] = (freq[l.query] || 0) + 1 })
   const topQueries = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 12)
 
   return (
     <div style={{ padding: 16, maxWidth: 720 }}>
-      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
         {[
           ['Hoy',        todayLogs.length, '#1a1209'],
@@ -59,7 +58,6 @@ function SearchLog() {
         ))}
       </div>
 
-      {/* Top queries */}
       {topQueries.length > 0 && (
         <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Búsquedas más frecuentes</div>
@@ -78,7 +76,6 @@ function SearchLog() {
         </div>
       )}
 
-      {/* Recent log */}
       <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, overflow: 'hidden' }}>
         <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8e0d4', fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1 }}>Historial reciente</div>
         {logs.length === 0 ? (
@@ -120,21 +117,24 @@ function SearchLog() {
 }
 
 export default function Admin() {
-  const [products, setProducts]   = useState([])
-  const [swipeStats, setSwipeStats] = useState({})
-  const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
+  const [products, setProducts]         = useState([])
+  const [swipeStats, setSwipeStats]     = useState({})
+  const [loading, setLoading]           = useState(true)
+  const [search, setSearch]             = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [view, setView]           = useState('grid')
-  const [activeTab, setActiveTab] = useState('all')
-  const [backfilling, setBackfilling] = useState(false)
+  const [view, setView]                 = useState('grid')
+  const [activeTab, setActiveTab]       = useState('all')
+  const [backfilling, setBackfilling]   = useState(false)
   const [backfillProgress, setBackfillProgress] = useState(null)
+  const [selected, setSelected]         = useState({})   // { [id]: true }
+  const [selectMode, setSelectMode]     = useState(false)
 
-  const { toast, show }                           = useToast()
-  const { posterProduct, open: openPoster, close: closePoster } = usePosterModal()
-  const { shareProduct, open: openShare, close: closeShare }   = useShareModal()
-  const { sellProduct, open: openSell, close: closeSell }      = useSellModal()
+  const { toast, show }                                                 = useToast()
+  const { posterProduct, open: openPoster, close: closePoster }         = usePosterModal()
+  const { shareProduct,  open: openShare,  close: closeShare }          = useShareModal()
+  const { sellProduct,   open: openSell,   close: closeSell }           = useSellModal()
 
+  const selectedCount = Object.keys(selected).length
 
   useEffect(() => { load() }, [])
 
@@ -153,10 +153,8 @@ export default function Admin() {
     setLoading(false)
   }
 
-  // For non-Vendido status changes (Disponible ↔ Reservado)
   async function handleStatusChange(id, status) {
     if (status === 'Vendido') {
-      // Route through SellModal to capture price + discount
       const product = products.find(p => p.id === id)
       if (product) openSell(product)
       return
@@ -166,7 +164,6 @@ export default function Admin() {
     show(`Marcado como ${status}`)
   }
 
-  // Called when SellModal confirms the sale — free label for physical reuse (UUID preserves history)
   async function handleSold(updatedProduct) {
     if (updatedProduct.size && updatedProduct.name) {
       await freeLabel(updatedProduct.size, updatedProduct.name)
@@ -176,7 +173,10 @@ export default function Admin() {
   }
 
   async function handleBackfill(force = false) {
-    const pending = products.filter(p => p.status !== 'Vendido' && (p.photos?.length || p.photo_url) && (force || !p.ai_tags))
+    const pending = products.filter(p =>
+      p.status !== 'Vendido' && p.status !== 'Archivado' &&
+      (p.photos?.length || p.photo_url) && (force || !p.ai_tags)
+    )
     if (!pending.length) { show('Todos los productos ya tienen análisis IA'); return }
     setBackfilling(true)
     setBackfillProgress({ done: 0, total: pending.length })
@@ -196,17 +196,65 @@ export default function Admin() {
     load()
   }
 
+  // Soft-delete: moves to Archivado (hidden from public, recoverable)
+  async function handleArchive(id) {
+    await updateProduct(id, { status: 'Archivado' })
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, status: 'Archivado' } : p))
+    show('Producto archivado')
+  }
+
+  // Restore an archived product back to Disponible
+  async function handleRestore(id) {
+    await updateProduct(id, { status: 'Disponible' })
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, status: 'Disponible' } : p))
+    show('Producto restaurado')
+  }
+
+  // Permanent delete — only surfaced from the Archivados tab
   async function handleDelete(id, name, size, label) {
-    if (!confirm(`¿Eliminar "${name}"? Esta acción no se puede deshacer.`)) return
+    if (!confirm(`¿Eliminar permanentemente "${name}"? Esta acción no se puede deshacer.`)) return
     await deleteProduct(id)
-    // Free the label for reuse
     if (size && label) await freeLabel(size, label)
     setProducts(prev => prev.filter(p => p.id !== id))
     show('Producto eliminado')
   }
 
+  // Bulk status update for selected products
+  async function handleBulkAction(action) {
+    const ids = Object.keys(selected)
+    if (!ids.length) return
+    const labels = { Disponible: 'marcar disponible', Reservado: 'reservar', Vendido: 'marcar vendido', Archivado: 'archivar' }
+    const label = labels[action] || action
+    if (!confirm(`¿${label.charAt(0).toUpperCase() + label.slice(1)} ${ids.length} producto${ids.length !== 1 ? 's' : ''}?`)) return
+    const updates = { status: action }
+    if (action === 'Vendido') updates.sold_at = new Date().toISOString()
+    await supabase.from('products').update(updates).in('id', ids)
+    setProducts(prev => prev.map(p => ids.includes(p.id) ? { ...p, ...updates } : p))
+    setSelected({})
+    show(`${ids.length} producto${ids.length !== 1 ? 's' : ''} actualizados`)
+  }
+
+  function toggleSelect(id) {
+    setSelected(prev => {
+      const next = { ...prev }
+      if (next[id]) delete next[id]
+      else next[id] = true
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedCount === filtered.length && filtered.length > 0) {
+      setSelected({})
+    } else {
+      const next = {}
+      filtered.forEach(p => { next[p.id] = true })
+      setSelected(next)
+    }
+  }
+
   const summary = {
-    total:     products.length,
+    total:     products.filter(p => p.status !== 'Archivado').length,
     available: products.filter(p => p.status === 'Disponible').length,
     reserved:  products.filter(p => p.status === 'Reservado').length,
     sold:      products.filter(p => p.status === 'Vendido').length,
@@ -214,6 +262,8 @@ export default function Admin() {
   }
 
   const filtered = products.filter(p => {
+    if (activeTab !== 'archived' && p.status === 'Archivado') return false
+    if (activeTab === 'archived' && p.status !== 'Archivado') return false
     const q = search.toLowerCase()
     if (q && !`${p.name} ${colorsArray(p.color).join(' ')} ${p.size} ${p.cat} ${p.bundle_label || ''}`.toLowerCase().includes(q)) return false
     if (filterStatus && p.status !== filterStatus) return false
@@ -262,7 +312,6 @@ export default function Admin() {
         ))}
       </div>
 
-
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, padding: '0 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', overflowX: 'auto' }}>
         {[
@@ -271,10 +320,11 @@ export default function Admin() {
           ['popular',  'Más gustados'],
           ['sold',     'Vendidos'],
           ['old',      '+30 días'],
+          ['archived', '🗄 Archivados'],
           ['bundles',  '📦 Lotes'],
           ['searches', '🔍 Búsquedas'],
         ].map(([key, label]) => (
-          <button key={key} style={tabStyle(key)} onClick={() => { setActiveTab(key); setFilterStatus('') }}>
+          <button key={key} style={tabStyle(key)} onClick={() => { setActiveTab(key); setFilterStatus(''); setSelectMode(false); setSelected({}) }}>
             {label}
           </button>
         ))}
@@ -283,44 +333,91 @@ export default function Admin() {
       {/* Toolbar — hidden on Bundles and Searches tabs */}
       {activeTab !== 'bundles' && activeTab !== 'searches' && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', flexWrap: 'wrap' }}>
-          <input type="text" placeholder="Buscar por nombre, talla, etiqueta…" value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 140 }} />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ width: 'auto' }}>
-            <option value="">Estado</option>
-            <option>Disponible</option>
-            <option>Vendido</option>
-            <option>Reservado</option>
-          </select>
-          <button
-            className="btn"
-            onClick={() => handleBackfill(false)}
-            disabled={backfilling}
-            style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
-          >
-            {backfilling
-              ? `IA ${backfillProgress?.done}/${backfillProgress?.total}`
-              : `✦ IA ${products.filter(p => !p.ai_tags && p.status !== 'Vendido' && (p.photos?.length || p.photo_url)).length}`
-            }
-          </button>
-          <button
-            className="btn"
-            onClick={() => handleBackfill(true)}
-            disabled={backfilling}
-            style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
-            title="Regenerar descripciones con el nuevo estilo"
-          >
-            {backfilling ? `IA ${backfillProgress?.done}/${backfillProgress?.total}` : '↺ IA todo'}
-          </button>
+          <input
+            type="text"
+            placeholder="Buscar por nombre, talla, etiqueta…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ flex: 1, minWidth: 140 }}
+          />
+          {activeTab !== 'archived' && (
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ width: 'auto' }}>
+              <option value="">Estado</option>
+              <option>Disponible</option>
+              <option>Vendido</option>
+              <option>Reservado</option>
+            </select>
+          )}
+          {activeTab !== 'archived' && (
+            <>
+              <button
+                className="btn"
+                onClick={() => handleBackfill(false)}
+                disabled={backfilling}
+                style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+              >
+                {backfilling
+                  ? `IA ${backfillProgress?.done}/${backfillProgress?.total}`
+                  : `✦ IA ${products.filter(p => !p.ai_tags && p.status !== 'Vendido' && p.status !== 'Archivado' && (p.photos?.length || p.photo_url)).length}`
+                }
+              </button>
+              <button
+                className="btn"
+                onClick={() => handleBackfill(true)}
+                disabled={backfilling}
+                style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                title="Regenerar descripciones con el nuevo estilo"
+              >
+                {backfilling ? `IA ${backfillProgress?.done}/${backfillProgress?.total}` : '↺ IA todo'}
+              </button>
+            </>
+          )}
           <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'grid' ? 700 : 400 }} onClick={() => setView('grid')}>⊞</button>
+            <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'grid'  ? 700 : 400 }} onClick={() => setView('grid')}>⊞</button>
             <button className="btn" style={{ padding: '8px 10px', fontWeight: view === 'table' ? 700 : 400 }} onClick={() => setView('table')}>☰</button>
           </div>
+          <button
+            className="btn"
+            style={{
+              padding: '8px 10px', fontSize: 12,
+              fontWeight: selectMode ? 700 : 400,
+              background: selectMode ? '#1a1209' : undefined,
+              color: selectMode ? '#f5e6c8' : undefined,
+            }}
+            onClick={() => { setSelectMode(v => !v); setSelected({}) }}
+          >
+            {selectMode ? `✓ ${selectedCount}` : '☐ Sel.'}
+          </button>
         </div>
       )}
 
       {/* Modals */}
       <PosterModal product={posterProduct} onClose={closePoster} />
       <ShareModal  product={shareProduct}  onClose={closeShare} />
-      <SellModal   product={sellProduct}   onClose={closeSell} onSold={handleSold} />
+      <SellModal   product={sellProduct}   onClose={closeSell}  onSold={handleSold} />
+
+      {/* Bulk action bar — floats at bottom when items are selected */}
+      {selectMode && selectedCount > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a1209', color: '#f5e6c8', borderRadius: 12, padding: '10px 16px',
+          display: 'flex', gap: 8, alignItems: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.35)', zIndex: 100, whiteSpace: 'nowrap',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, marginRight: 4 }}>{selectedCount} sel.</span>
+          {activeTab === 'archived' ? (
+            <button onClick={() => handleBulkAction('Disponible')} className="btn" style={{ background: '#e8f5e9', color: '#2e7d32', fontSize: 12 }}>↩ Restaurar</button>
+          ) : (
+            <>
+              <button onClick={() => handleBulkAction('Disponible')} className="btn" style={{ background: '#e8f5e9', color: '#2e7d32', fontSize: 12 }}>Disponible</button>
+              <button onClick={() => handleBulkAction('Reservado')}  className="btn" style={{ background: '#fff3e0', color: '#e65100', fontSize: 12 }}>Reservar</button>
+              <button onClick={() => handleBulkAction('Vendido')}    className="btn" style={{ background: '#ffebee', color: '#c62828', fontSize: 12 }}>Vendido</button>
+              <button onClick={() => handleBulkAction('Archivado')}  className="btn" style={{ background: '#f0ede8', color: '#9e8a6a', fontSize: 12 }}>🗄 Archivar</button>
+            </>
+          )}
+          <button onClick={() => setSelected({})} style={{ background: 'transparent', border: 'none', color: '#c4b9a8', fontSize: 16, cursor: 'pointer', padding: '0 4px' }}>✕</button>
+        </div>
+      )}
 
       {/* Content */}
       {activeTab === 'searches' ? (
@@ -331,41 +428,98 @@ export default function Admin() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
       ) : (
         <>
-          <div style={{ padding: '8px 16px', fontSize: 12, color: '#9e8a6a' }}>
+          <div style={{ padding: '8px 16px', fontSize: 12, color: '#9e8a6a', display: 'flex', alignItems: 'center', gap: 8 }}>
             {`${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`}
+            {selectMode && filtered.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                style={{ fontSize: 12, background: 'none', border: 'none', color: '#1a1209', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+              >
+                {selectedCount === filtered.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+              </button>
+            )}
           </div>
 
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>📦</div>
-              <div style={{ fontFamily: "'Playfair Display', serif" }}>No hay productos aquí</div>
-              <Link to="/admin/upload" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex', textDecoration: 'none' }}>
-                + Agregar producto
-              </Link>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>{activeTab === 'archived' ? '🗄' : '📦'}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif" }}>
+                {activeTab === 'archived' ? 'No hay productos archivados' : 'No hay productos aquí'}
+              </div>
+              {activeTab !== 'archived' && (
+                <Link to="/admin/upload" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex', textDecoration: 'none' }}>
+                  + Agregar producto
+                </Link>
+              )}
             </div>
           ) : view === 'grid' ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, padding: 16 }}>
               {filtered.map(p => {
-                const s = swipeStats[p.id]
+                const s          = swipeStats[p.id]
+                const isSelected = !!selected[p.id]
                 return (
                   <div key={p.id} style={{ position: 'relative' }}>
+                    {/* Select overlay */}
+                    {selectMode && (
+                      <div
+                        onClick={() => toggleSelect(p.id)}
+                        style={{
+                          position: 'absolute', inset: 0, zIndex: 10, cursor: 'pointer',
+                          background: isSelected ? 'rgba(26,18,9,0.12)' : 'transparent',
+                        }}
+                      >
+                        <div style={{
+                          position: 'absolute', top: 8, left: 8,
+                          width: 22, height: 22, borderRadius: 4,
+                          background: isSelected ? '#1a1209' : '#fff',
+                          border: '2px solid #1a1209',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#f5e6c8', fontSize: 13, fontWeight: 700,
+                        }}>
+                          {isSelected ? '✓' : ''}
+                        </div>
+                      </div>
+                    )}
+
                     <ProductCard product={p} admin onStatusChange={handleStatusChange} />
+
                     {s && (s.likes > 0 || s.skips > 0 || s.wa_requests > 0) && (
                       <div style={{ display: 'flex', gap: 6, padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', fontSize: 11 }}>
-                        <span style={{ color: '#2e7d32' }}>♥ {s.likes || 0}</span>
+                        <span style={{ color: '#2e7d32', display: 'flex', alignItems: 'center', gap: 3 }}><CartHeart liked size={13} /> {s.likes || 0}</span>
                         <span style={{ color: '#9e8a6a' }}>✕ {s.skips || 0}</span>
                         {s.wa_requests > 0 && <span style={{ color: '#1565c0' }}>💬 {s.wa_requests}</span>}
                         {s.likes > 0 && <span style={{ color: '#9e8a6a', marginLeft: 'auto' }}>{Math.round((s.likes / ((s.likes || 0) + (s.skips || 0))) * 100)}%</span>}
                       </div>
                     )}
-                    <div style={{ padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', display: 'flex', gap: 6 }}>
-                      <button onClick={() => openShare(p)} style={{ flex: 1, padding: '6px', borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                        📤
-                      </button>
-                      <button onClick={() => openPoster(p)} style={{ flex: 1, padding: '6px', borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                        🖼️
-                      </button>
-                    </div>
+
+                    {activeTab === 'archived' ? (
+                      <div style={{ padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => handleRestore(p.id)}
+                          style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #c8e6c9', background: '#e8f5e9', color: '#2e7d32', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          ↩ Restaurar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id, p.name, p.size, p.name)}
+                          style={{ padding: 6, borderRadius: 6, border: '1px solid #ffcdd2', background: '#ffebee', color: '#c62828', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '6px 10px', background: '#fff', borderTop: '1px solid #e8e0d4', display: 'flex', gap: 6 }}>
+                        <button onClick={() => openShare(p)} style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          📤
+                        </button>
+                        <button onClick={() => openPoster(p)} style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          🖼️
+                        </button>
+                        <button onClick={() => handleArchive(p.id)} title="Archivar" style={{ padding: 6, borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#9e8a6a', fontSize: 12, cursor: 'pointer' }}>
+                          🗄
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -375,20 +529,36 @@ export default function Admin() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', borderRadius: 8, overflow: 'hidden', border: '1px solid #e8e0d4' }}>
                 <thead>
                   <tr style={{ background: '#1a1209', color: '#f5e6c8' }}>
-                    {['Producto','Lote','Talla','Precio','Venta','Dto','Ingreso','Días','Estado','♥','Acciones'].map(h => (
+                    {selectMode && (
+                      <th style={{ padding: '10px 12px', width: 32 }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedCount === filtered.length && filtered.length > 0}
+                          onChange={toggleSelectAll}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </th>
+                    )}
+                    {['Producto','Lote','Talla','Precio','Venta','Dto','Ingreso','Días','Estado','🛒','Acciones'].map(h => (
                       <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, letterSpacing: 0.5, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((p, i) => {
-                    const days     = daysSince(p.created_at)
-                    const dotColor = days > 60 ? '#c62828' : days > 30 ? '#e65100' : '#2e7d32'
-                    const st       = STATUS_STYLES[p.status] || STATUS_STYLES.Disponible
-                    const sw       = swipeStats[p.id]
+                    const days        = daysSince(p.created_at)
+                    const dotColor    = days > 60 ? '#c62828' : days > 30 ? '#e65100' : '#2e7d32'
+                    const st          = STATUS_STYLES[p.status] || STATUS_STYLES.Disponible
+                    const sw          = swipeStats[p.id]
                     const hasDiscount = p.discount && p.discount > 0
+                    const isSelected  = !!selected[p.id]
                     return (
-                      <tr key={p.id} style={{ background: i % 2 === 0 ? '#fff' : '#faf8f5', borderBottom: '1px solid #e8e0d4' }}>
+                      <tr key={p.id} style={{ background: isSelected ? '#f5f0e8' : i % 2 === 0 ? '#fff' : '#faf8f5', borderBottom: '1px solid #e8e0d4' }}>
+                        {selectMode && (
+                          <td style={{ padding: '9px 12px' }}>
+                            <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(p.id)} style={{ cursor: 'pointer' }} />
+                          </td>
+                        )}
                         <td style={{ padding: '9px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {p.photo_url
@@ -430,12 +600,21 @@ export default function Admin() {
                         <td style={{ padding: '9px 12px', color: '#2e7d32', fontWeight: 600 }}>{sw?.likes || 0}</td>
                         <td style={{ padding: '9px 12px' }}>
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {p.status !== 'Disponible' && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#2e7d32' }} onClick={() => handleStatusChange(p.id, 'Disponible')}>Disponible</button>}
-                            {p.status !== 'Vendido'    && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828' }} onClick={() => openSell(p)}>Vendido</button>}
-                            {p.status !== 'Reservado'  && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#e65100' }} onClick={() => handleStatusChange(p.id, 'Reservado')}>Reservar</button>}
-                            <button className="btn" style={{ fontSize: 11, padding: '3px 7px' }} onClick={() => openShare(p)}>📤</button>
-                            <button className="btn" style={{ fontSize: 11, padding: '3px 7px' }} onClick={() => openPoster(p)}>🖼️</button>
-                            <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828', borderColor: '#ffcdd2' }} onClick={() => handleDelete(p.id, p.name, p.size, p.name)}>✕</button>
+                            {activeTab === 'archived' ? (
+                              <>
+                                <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#2e7d32' }} onClick={() => handleRestore(p.id)}>↩ Restaurar</button>
+                                <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828', borderColor: '#ffcdd2' }} onClick={() => handleDelete(p.id, p.name, p.size, p.name)}>✕ Eliminar</button>
+                              </>
+                            ) : (
+                              <>
+                                {p.status !== 'Disponible' && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#2e7d32' }} onClick={() => handleStatusChange(p.id, 'Disponible')}>Disponible</button>}
+                                {p.status !== 'Vendido'    && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#c62828' }} onClick={() => openSell(p)}>Vendido</button>}
+                                {p.status !== 'Reservado'  && <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#e65100' }} onClick={() => handleStatusChange(p.id, 'Reservado')}>Reservar</button>}
+                                <button className="btn" style={{ fontSize: 11, padding: '3px 7px' }} onClick={() => openShare(p)}>📤</button>
+                                <button className="btn" style={{ fontSize: 11, padding: '3px 7px' }} onClick={() => openPoster(p)}>🖼️</button>
+                                <button className="btn" style={{ fontSize: 11, padding: '3px 7px', color: '#9e8a6a' }} title="Archivar" onClick={() => handleArchive(p.id)}>🗄</button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

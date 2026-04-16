@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getProductsSorted, supabase } from '../lib/supabase.js'
 import { SIZES, COLOR_DOTS, WA_NUMBER, colorsArray } from '../lib/constants.js'
+import CartHeart from '../components/CartHeart.jsx'
 
 const SWIPE_THRESHOLD = 75
 const STORAGE_KEY     = 'vestilo-liked'
@@ -331,8 +332,8 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginTop: 4 }}>Bs. {p.price}</div>
                 </div>
               </div>
-              <button onClick={() => onToggleLike(p)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16, backdropFilter: 'blur(4px)' }}>
-                {liked ? '❤️' : '🤍'}
+              <button onClick={() => onToggleLike(p)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)', color: liked ? '#ef5350' : '#f5e6c8' }}>
+                <CartHeart liked={liked} size={18} />
               </button>
             </div>
           )
@@ -767,7 +768,8 @@ export default function Catalogue() {
           <button ref={refSkipBtn} onClick={doSkip} className="action-btn"
             style={{ width: 56, height: 56, background: '#241810', border: '2px solid #ef5350', color: '#ef5350', fontSize: 22, boxShadow: '0 4px 18px rgba(239,83,80,0.28)' }}>✕</button>
           <button ref={refLikeBtn} onClick={doLike} className="action-btn"
-            style={{ width: 64, height: 64, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', fontSize: 26, boxShadow: '0 4px 22px rgba(76,175,80,0.32)' }}>♥</button>
+            style={{ width: 64, height: 64, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', boxShadow: '0 4px 22px rgba(76,175,80,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CartHeart liked size={28} /></button>
         </div>
       )}
       {queue.length > 0 && current && (

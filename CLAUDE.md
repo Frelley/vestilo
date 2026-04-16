@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v3.1 (next: v3.2) ✓
+## Version: v3.2 (next: v3.3) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -105,6 +105,7 @@ v2.8 All prices set to 34.99 Bs (price column converted integer→numeric(10,2))
 v2.9 Shared tag dictionary (api/tags.js): canonical vocabulary, synonym map, semantic groups, ANTONYMS map, Levenshtein fuzzy matching. analyze-product pins Claude to canonical tags + post-processes output. search: pure-JS first, Haiku fallback (3-5 specific tags, no generic ones), antonym exclusion (liso excludes estampado/grafico/etc via parallel Supabase query), scored RPC min score ≥ 2. Search UX: Buscar always visible, ✕ clear appears alongside when results active. Run api/search_products_scored.sql in Supabase once.
 v3.0 Visual polish: grid cards with hover lift + image zoom (.product-card), mode picker radial gradient bg + card hover lift (.mode-card), swipe action buttons with colored glow shadows (.action-btn), swipe card drop-shadow filter, .card base shadow, .btn active scale, Product page photo arrows larger with blur backdrop.
 v3.1 Search improvements: rotating animated placeholder suggestions in both swipe and grid search bars (10 real example queries, CSS fade-in animation, pauses while typing). Search logging: every query + tags + result count written to Supabase search_logs table (server-side, fire-and-forget). Admin "🔍 Búsquedas" tab: stats (today/week/total/zero-result rate), top queries bar chart, full chronological log with tags and result counts. Run sql/search_logs.sql in Supabase once.
+v3.2 Bulk actions: select mode toggle in admin toolbar (☐ Sel.), checkboxes on grid cards + table rows, "Seleccionar todo" link, floating bulk action bar (Disponible/Reservar/Vendido/Archivar). Soft delete: 🗄 archive button replaces permanent delete on all normal views; archived products go to "🗄 Archivados" tab with Restaurar + Eliminar actions; Archivado status invisible to public. API rate limiting: /api/search (30 req/min), /api/analyze-product (10 req/min) via in-memory per-IP limiter (api/_rateLimit.js).
 
 ## Rules
 1. Read file before editing

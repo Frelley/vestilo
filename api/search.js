@@ -1,9 +1,14 @@
 import { CANONICAL_TAGS, extractTagsFromQuery, toCanonicalTags, getExcludeTags } from './tags.js'
+import { rateLimit } from './_rateLimit.js'
 
 export const maxDuration = 15
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown'
+  const rl = rateLimit(ip, { limit: 30, windowMs: 60_000 })
+  if (!rl.ok) return res.status(429).json({ error: 'Too many requests', retryAfter: rl.retryAfter })
 
   const { query } = req.body
   if (!query?.trim()) return res.status(400).json({ error: 'Missing query' })
