@@ -98,12 +98,16 @@ export default function Product() {
                   <>
                     <button
                       onClick={() => setActivePhoto(p => (p - 1 + allPhotos.length) % allPhotos.length)}
-                      style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', color: '#fff', border: 'none', borderRadius: '50%', width: 38, height: 38, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', transition: 'transform 0.15s, background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}>
                       ‹
                     </button>
                     <button
                       onClick={() => setActivePhoto(p => (p + 1) % allPhotos.length)}
-                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.4)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', color: '#fff', border: 'none', borderRadius: '50%', width: 38, height: 38, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', transition: 'transform 0.15s, background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}>
                       ›
                     </button>
                     <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>

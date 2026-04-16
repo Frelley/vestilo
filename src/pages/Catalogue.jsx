@@ -183,22 +183,22 @@ function SpotlightOnboarding({ steps, onDone }) {
 // ── Mode picker ───────────────────────────────────────────────────────────────
 function ModePicker({ onPick }) {
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 28, fontWeight: 700, textAlign: 'center', marginBottom: 6 }}>Vestilo a tu sonso!</div>
-      <div style={{ color: '#9e8a6a', fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 48 }}>Santa Cruz · Bolivia</div>
-      <div style={{ fontSize: 13, color: '#9e8a6a', marginBottom: 20, textAlign: 'center' }}>¿Cómo querés explorar?</div>
+    <div style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 50% 0%, #2d1f12 0%, #1a1209 65%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 30, fontWeight: 700, textAlign: 'center', marginBottom: 6 }}>Vestilo a tu sonso!</div>
+      <div style={{ color: '#9e8a6a', fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 10 }}>Santa Cruz · Bolivia</div>
+      <div style={{ width: 32, height: 1, background: '#3d3020', marginBottom: 32 }} />
+      <div style={{ fontSize: 13, color: '#7a6a55', marginBottom: 20, textAlign: 'center' }}>¿Cómo querés explorar?</div>
       <div style={{ display: 'flex', gap: 14, width: '100%', maxWidth: 340 }}>
         {[
           { key: 'swipe', icon: '👆', label: 'Swipe', desc: 'Desliza una por una y guarda tus favoritas' },
           { key: 'grid',  icon: '🗂️', label: 'Catálogo', desc: 'Ve todas las prendas en una cuadrícula' },
         ].map(opt => (
-          <button key={opt.key} onClick={() => onPick(opt.key)} style={{
-            flex: 1, background: '#241810', border: '1px solid #3d3020', borderRadius: 16,
-            padding: '28px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          <button key={opt.key} onClick={() => onPick(opt.key)} className="mode-card" style={{
+            background: '#241810', border: '1px solid #3d3020',
           }}>
-            <span style={{ fontSize: 36 }}>{opt.icon}</span>
+            <span style={{ fontSize: 38 }}>{opt.icon}</span>
             <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 15, fontWeight: 700 }}>{opt.label}</div>
-            <div style={{ fontSize: 11, color: '#9e8a6a', textAlign: 'center', lineHeight: 1.5 }}>{opt.desc}</div>
+            <div style={{ fontSize: 11, color: '#9e8a6a', textAlign: 'center', lineHeight: 1.55 }}>{opt.desc}</div>
           </button>
         ))}
       </div>
@@ -285,7 +285,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 10 }}>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#1a1209' }}>Vestilo a tu sonso!</div>
           <div style={{ fontSize: 9, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
@@ -307,7 +307,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           const photo = getPhotos(p)[0]
           const liked = likedIds.includes(p.id)
           return (
-            <div key={p.id} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e0d4', position: 'relative' }}>
+            <div key={p.id} className="product-card">
               <div onClick={() => navigate(`/p/${p.id}`)} style={{ cursor: 'pointer' }}>
                 {photo
                   ? <img src={photo} alt={p.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
@@ -654,7 +654,7 @@ export default function Catalogue() {
             <div
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} onClick={onTap}
-              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, background: 'transparent', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', perspective: 1000 }}>
+              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, background: 'transparent', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', perspective: 1000, filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
               {/* Flip inner */}
               <div style={{ position: 'absolute', inset: 0, borderRadius: 16, transformStyle: 'preserve-3d', transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.42s ease' }}>
 
@@ -733,14 +733,10 @@ export default function Catalogue() {
       {/* Action buttons */}
       {current && (
         <div style={{ position: 'fixed', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20, alignItems: 'center', zIndex: 10 }}>
-          <button ref={refSkipBtn} onClick={doSkip}
-            style={{ width: 56, height: 56, borderRadius: '50%', background: '#241810', border: '2px solid #ef5350', color: '#ef5350', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
-            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>✕</button>
-          <button ref={refLikeBtn} onClick={doLike}
-            style={{ width: 64, height: 64, borderRadius: '50%', background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', fontSize: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
-            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>♥</button>
+          <button ref={refSkipBtn} onClick={doSkip} className="action-btn"
+            style={{ width: 56, height: 56, background: '#241810', border: '2px solid #ef5350', color: '#ef5350', fontSize: 22, boxShadow: '0 4px 18px rgba(239,83,80,0.28)' }}>✕</button>
+          <button ref={refLikeBtn} onClick={doLike} className="action-btn"
+            style={{ width: 64, height: 64, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', fontSize: 26, boxShadow: '0 4px 22px rgba(76,175,80,0.32)' }}>♥</button>
         </div>
       )}
       {queue.length > 0 && current && (

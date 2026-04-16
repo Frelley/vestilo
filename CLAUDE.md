@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v2.9 (next: v3.0) ✓
+## Version: v3.0 (next: v3.1) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -104,6 +104,7 @@ v2.6 PosterModal: 1080x1080 social media poster generator with QR code, copy ima
 v2.7 AI features: auto-analyze product photos on upload (Claude Sonnet), generates description (notes) + hidden ai_tags. Admin backfill button. AI search bar in Catalogue (both modes) via /api/search using Claude Haiku tag extraction + Supabase array overlap.
 v2.8 All prices set to 34.99 Bs (price column converted integer→numeric(10,2)). Location section added (Centro, calle Charcas) to both swipe and grid views. Swipe card flip: tap center = flip to back showing description, tags, WA button; tap sides = cycle photos.
 v2.9 Shared tag dictionary (api/tags.js): canonical vocabulary, synonym map, semantic groups, ANTONYMS map, Levenshtein fuzzy matching. analyze-product pins Claude to canonical tags + post-processes output. search: pure-JS first, Haiku fallback (3-5 specific tags, no generic ones), antonym exclusion (liso excludes estampado/grafico/etc via parallel Supabase query), scored RPC min score ≥ 2. Search UX: Buscar always visible, ✕ clear appears alongside when results active. Run api/search_products_scored.sql in Supabase once.
+v3.0 Visual polish: grid cards with hover lift + image zoom (.product-card), mode picker radial gradient bg + card hover lift (.mode-card), swipe action buttons with colored glow shadows (.action-btn), swipe card drop-shadow filter, .card base shadow, .btn active scale, Product page photo arrows larger with blur backdrop.
 
 ## Rules
 1. Read file before editing
