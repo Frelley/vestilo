@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v3.2 (next: v3.3) ✓
+## Version: v3.3 (next: v3.4) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -106,6 +106,7 @@ v2.9 Shared tag dictionary (api/tags.js): canonical vocabulary, synonym map, sem
 v3.0 Visual polish: grid cards with hover lift + image zoom (.product-card), mode picker radial gradient bg + card hover lift (.mode-card), swipe action buttons with colored glow shadows (.action-btn), swipe card drop-shadow filter, .card base shadow, .btn active scale, Product page photo arrows larger with blur backdrop.
 v3.1 Search improvements: rotating animated placeholder suggestions in both swipe and grid search bars (10 real example queries, CSS fade-in animation, pauses while typing). Search logging: every query + tags + result count written to Supabase search_logs table (server-side, fire-and-forget). Admin "🔍 Búsquedas" tab: stats (today/week/total/zero-result rate), top queries bar chart, full chronological log with tags and result counts. Run sql/search_logs.sql in Supabase once.
 v3.2 Bulk actions: select mode toggle in admin toolbar (☐ Sel.), checkboxes on grid cards + table rows, "Seleccionar todo" link, floating bulk action bar (Disponible/Reservar/Vendido/Archivar). Soft delete: 🗄 archive button replaces permanent delete on all normal views; archived products go to "🗄 Archivados" tab with Restaurar + Eliminar actions; Archivado status invisible to public. API rate limiting: /api/search (30 req/min), /api/analyze-product (10 req/min) via in-memory per-IP limiter (api/_rateLimit.js).
+v3.3 AI color auto-detection: uploading the first photo calls /api/detect-colors (Claude Haiku) and pre-fills the color buttons if none are selected. Default price changed to 35 Bs.
 
 ## Rules
 1. Read file before editing

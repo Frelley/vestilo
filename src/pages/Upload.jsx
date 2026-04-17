@@ -9,7 +9,7 @@ const MAX_PHOTOS = 4
 const LAST_BUNDLE_KEY = 'vestilo-last-bundle'
 function getLastBundle() { try { return localStorage.getItem(LAST_BUNDLE_KEY) || '' } catch { return '' } }
 function saveLastBundle(id) { try { if (id) localStorage.setItem(LAST_BUNDLE_KEY, id) } catch {} }
-const EMPTY = () => ({ name: '', size: '', color: [], price: '', notes: '', bundle_id: getLastBundle(), bundle_label: '' })
+const EMPTY = () => ({ name: '', size: '', color: [], price: '35', notes: '', bundle_id: getLastBundle(), bundle_label: '' })
 
 export default function Upload() {
   const { id }     = useParams()
@@ -20,9 +20,10 @@ export default function Upload() {
   const [form, setForm]       = useState(EMPTY())
   const [photos, setPhotos]   = useState([])
   const [activePhoto, setActivePhoto] = useState(0)
-  const [saving, setSaving]   = useState(false)
-  const [loading, setLoading] = useState(isEdit)
-  const [bundles, setBundles] = useState([])
+  const [saving, setSaving]           = useState(false)
+  const [loading, setLoading]         = useState(isEdit)
+  const [bundles, setBundles]         = useState([])
+  const [detectingColors, setDetectingColors] = useState(false)
 
   // Load active bundles for the dropdown
   useEffect(() => {
@@ -56,15 +57,34 @@ export default function Upload() {
     })
   }, [id, isEdit])
 
+  async function detectColors(imageBase64) {
+    setDetectingColors(true)
+    try {
+      const res = await fetch('/api/detect-colors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_base64: imageBase64 }),
+      })
+      if (!res.ok) return
+      const { colors } = await res.json()
+      if (colors?.length) {
+        setForm(f => f.color.length === 0 ? { ...f, color: colors } : f)
+      }
+    } catch {}
+    finally { setDetectingColors(false) }
+  }
+
   function handlePhotoAdd(e) {
-    const files     = Array.from(e.target.files)
-    const remaining = MAX_PHOTOS - photos.length
+    const files       = Array.from(e.target.files)
+    const remaining   = MAX_PHOTOS - photos.length
     if (remaining <= 0) { show(`Máximo ${MAX_PHOTOS} fotos`, 'error'); return }
-    const toAdd = files.slice(0, remaining)
-    toAdd.forEach(file => {
+    const toAdd       = files.slice(0, remaining)
+    const isFirstPhoto = photos.length === 0
+    toAdd.forEach((file, idx) => {
       const reader = new FileReader()
       reader.onload = ev => {
         setPhotos(prev => [...prev, { file, preview: ev.target.result, existing_url: null }])
+        if (idx === 0 && isFirstPhoto) detectColors(ev.target.result)
       }
       reader.readAsDataURL(file)
     })
@@ -349,7 +369,10 @@ export default function Upload() {
         {/* Color */}
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
           <label style={lblStyle}>
-            Color *{form.color.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}> — {form.color.join(', ')}</span>}
+            Color *{detectingColors
+              ? <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}> — detectando...</span>
+              : form.color.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}> — {form.color.join(', ')}</span>
+            }
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {COLORS.map(c => (
