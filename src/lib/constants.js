@@ -1,13 +1,14 @@
 export const WA_NUMBER = import.meta.env.VITE_WA_NUMBER || '59170000000'
 
 export const SIZES   = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
-export const COLORS  = ['Negro', 'Blanco', 'Gris', 'Azul', 'Rojo', 'Verde', 'Café', 'Amarillo', 'Rosa', 'Morado', 'Naranja', 'Multicolor']
+export const COLORS  = ['Negro', 'Blanco', 'Gris', 'Azul', 'Azul marino', 'Rojo', 'Vino', 'Verde', 'Café', 'Beige', 'Amarillo', 'Rosa', 'Morado', 'Naranja', 'Multicolor']
 export const STYLES  = ['Oversize', 'Slim fit', 'Crop', 'Manga larga', 'Bordado', 'Estampado', 'Tie-dye', 'Básica', 'Vintage']
 export const CATS    = ['Básica', 'Diseño', 'Premium', 'Vintage', 'Deportiva', 'Edición limitada']
 
 export const COLOR_DOTS = {
   Negro: '#1a1a1a', Blanco: '#f0ede8', Gris: '#9e9e9e', Azul: '#1565c0',
-  Rojo: '#c62828', Verde: '#2e7d32', Café: '#6d4c41', Amarillo: '#f9a825',
+  'Azul marino': '#1a237e', Rojo: '#c62828', Vino: '#6d1b2e', Verde: '#2e7d32',
+  Café: '#6d4c41', Beige: '#d4b896', Amarillo: '#f9a825',
   Rosa: '#e91e8c', Morado: '#6a1b9a', Naranja: '#e65100',
   Multicolor: 'linear-gradient(135deg,#f44336 0%,#2196f3 50%,#4caf50 100%)',
 }

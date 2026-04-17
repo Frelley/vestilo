@@ -54,7 +54,7 @@ Responde SOLO con JSON válido, sin texto adicional:
   "colors": ["colores de esta lista exacta: negro, blanco, gris, azul, azul-marino, rojo, verde, amarillo, cafe, naranja, rosa, morado, multicolor, beige, crema"],
   "aesthetic": ["2-4 etiquetas de estética de esta lista: vintage, streetwear, y2k, boho, minimalista, cottagecore, coquette, preppy, sporty, elegante, casual, retro, grunge, punk, rock, hipster, urbano, formal, semi-formal"],
   "gender": "mujer, hombre, o unisex",
-  "tags": ["8-15 tags de la lista canónica que describe la prenda"]
+  "tags": ["8-15 tags de la lista canónica que describe la prenda — incluir tipo de prenda: camiseta, camisa, hoodie, buzo, musculosa, top, etc."]
 }
 
 Los tags deben ser ÚNICAMENTE palabras de esta lista canónica (elige los más relevantes):

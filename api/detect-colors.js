@@ -2,7 +2,7 @@ import { rateLimit } from './_rateLimit.js'
 
 export const maxDuration = 15
 
-const UI_COLORS = ['Negro', 'Blanco', 'Gris', 'Azul', 'Rojo', 'Verde', 'Café', 'Amarillo', 'Rosa', 'Morado', 'Naranja', 'Multicolor']
+const UI_COLORS = ['Negro', 'Blanco', 'Gris', 'Azul', 'Azul marino', 'Rojo', 'Vino', 'Verde', 'Café', 'Beige', 'Amarillo', 'Rosa', 'Morado', 'Naranja', 'Multicolor']
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()

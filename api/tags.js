@@ -38,7 +38,7 @@ function levenshtein(a, b) {
 
 export const CANONICAL_TAGS = [
   // ── GARMENT TYPE ──────────────────────────────────────────────────────────
-  'camiseta', 'musculosa', 'top',
+  'camiseta', 'musculosa', 'top', 'camisa', 'hoodie', 'buzo',
 
   // ── FIT / CORTE ───────────────────────────────────────────────────────────
   'oversize', 'holgado', 'slim-fit', 'ajustado', 'entallado', 'regular',
@@ -127,8 +127,14 @@ export const SYNONYMS = {
   'blusa':             'top',
   'musclo':            'musculosa',
   'undershirt':        'musculosa',
-  'sudadera':          'franela',
-  'sueter':            'franela',
+  'sudadera':          'hoodie',
+  'sueter':            'hoodie',
+  'sweatshirt':        'hoodie',
+  'campera':           'hoodie',
+  'chompa':            'buzo',
+  'shirt':             'camisa',
+  'camisa-formal':     'camisa',
+  'camisa-casual':     'camisa',
 
   // ── Fit ───────────────────────────────────────────────────────────────────
   'oversized':    'oversize',
@@ -179,6 +185,7 @@ export const SYNONYMS = {
   'azulito':        'azul',
   'navy':           'azul-marino',
   'marino':         'azul-marino',
+  'azul marino':    'azul-marino',
   'royal':          'azul-rey',
   'royal-blue':     'azul-rey',
   'azul-intenso':   'azul-electrico',
@@ -190,6 +197,7 @@ export const SYNONYMS = {
   'carmin':        'rojo',
   'rojo-carbon':   'rojo',
   'vino':          'rojo-vino',
+  'Vino':          'rojo-vino',
   'burgundy':      'rojo-vino',
   'rojo-burgundy': 'rojo-vino',
   'rojo-pasado':   'rojo-vino',
