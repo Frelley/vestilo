@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v3.4 (next: v3.5) ✓
+## Version: v3.5 (next: v3.6) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -108,6 +108,7 @@ v3.1 Search improvements: rotating animated placeholder suggestions in both swip
 v3.2 Bulk actions: select mode toggle in admin toolbar (☐ Sel.), checkboxes on grid cards + table rows, "Seleccionar todo" link, floating bulk action bar (Disponible/Reservar/Vendido/Archivar). Soft delete: 🗄 archive button replaces permanent delete on all normal views; archived products go to "🗄 Archivados" tab with Restaurar + Eliminar actions; Archivado status invisible to public. API rate limiting: /api/search (30 req/min), /api/analyze-product (10 req/min) via in-memory per-IP limiter (api/_rateLimit.js).
 v3.3 AI color auto-detection: uploading the first photo calls /api/detect-colors (Claude Haiku) and pre-fills the color buttons if none are selected. Default price changed to 35 Bs.
 v3.4 Expanded colors (Beige, Azul marino, Vino) added to UI and AI detection. Tag dictionary: added camisa/hoodie/buzo garment types, fixed sudadera→hoodie bug (was wrongly mapping to franela material), added chompa/campera/sweatshirt synonyms.
+v3.5 Favorites page: removed WA onboarding overlay, WhatsApp button is now a floating pill fixed at bottom of screen.
 
 ## Rules
 1. Read file before editing

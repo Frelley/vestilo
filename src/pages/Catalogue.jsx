@@ -8,7 +8,6 @@ const SWIPE_THRESHOLD = 75
 const STORAGE_KEY     = 'vestilo-liked'
 const MODE_KEY        = 'vestilo-mode'
 const ONBOARDING_KEY    = 'vestilo-onboarded'
-const WA_ONBOARDING_KEY = 'vestilo-wa-onboarded'
 
 const SEARCH_SUGGESTIONS = [
   'algo para el gym',
@@ -25,8 +24,6 @@ const SEARCH_SUGGESTIONS = [
 
 function getOnboarded()    { try { return localStorage.getItem(ONBOARDING_KEY) === '1' } catch { return false } }
 function saveOnboarded()   { try { localStorage.setItem(ONBOARDING_KEY, '1') } catch {} }
-function getWaOnboarded()  { try { return localStorage.getItem(WA_ONBOARDING_KEY) === '1' } catch { return false } }
-function saveWaOnboarded() { try { localStorage.setItem(WA_ONBOARDING_KEY, '1') } catch {} }
 function getLiked()      { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] } }
 function saveLiked(ids)  { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)) } catch {} }
 function getSavedMode()  { try { return localStorage.getItem(MODE_KEY) || null } catch { return null } }
@@ -222,23 +219,8 @@ function ModePicker({ onPick }) {
 
 // ── Liked list ────────────────────────────────────────────────────────────────
 function LikedList({ likedProducts, onBack, onRemove }) {
-  const waText  = likedProducts.map(p => `• ${p.name} — Talla ${p.size} — Bs. ${p.price}`).join('\n')
-  const waUrl   = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
-  const waBtnRef = useRef(null)
-  const [showWaOnboarding, setShowWaOnboarding] = useState(false)
-
-  // Trigger WA onboarding once, only when there are items
-  useEffect(() => {
-    if (likedProducts.length > 0 && !getWaOnboarded()) {
-      setTimeout(() => setShowWaOnboarding(true), 350)
-    }
-  }, [])
-
-  const waSteps = [{
-    ref: waBtnRef,
-    title: '¡Ya casi! Pedí por WhatsApp',
-    desc: 'Tocá este botón para enviar tu lista de favoritas directo a la tienda. Se arma el mensaje automáticamente.',
-  }]
+  const waText = likedProducts.map(p => `• ${p.name} — Talla ${p.size} — Bs. ${p.price}`).join('\n')
+  const waUrl  = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column' }}>
@@ -246,7 +228,7 @@ function LikedList({ likedProducts, onBack, onRemove }) {
         <button onClick={onBack} style={{ background: 'transparent', border: 'none', color: '#9e8a6a', fontSize: 20, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700 }}>Mis favoritas ({likedProducts.length})</div>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px', paddingBottom: likedProducts.length > 0 ? 96 : 16 }}>
         {likedProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🤍</div>
@@ -270,20 +252,12 @@ function LikedList({ likedProducts, onBack, onRemove }) {
           )
         })}
       </div>
-      {likedProducts.length > 0 && (
-        <div style={{ padding: '16px 16px 36px' }}>
-          <a ref={waBtnRef} href={waUrl} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
-            {WA_SVG} Pedir por WhatsApp ({likedProducts.length})
-          </a>
-        </div>
-      )}
 
-      {showWaOnboarding && (
-        <SpotlightOnboarding
-          steps={waSteps}
-          onDone={() => { setShowWaOnboarding(false); saveWaOnboarded() }}
-        />
+      {likedProducts.length > 0 && (
+        <a href={waUrl} target="_blank" rel="noopener noreferrer"
+          style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 50, padding: '14px 24px', fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(37,211,102,0.45)', whiteSpace: 'nowrap', zIndex: 100 }}>
+          {WA_SVG} Pedir por WhatsApp ({likedProducts.length})
+        </a>
       )}
     </div>
   )
