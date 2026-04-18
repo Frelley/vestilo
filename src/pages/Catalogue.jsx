@@ -284,7 +284,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           </button>
           <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>👆</button>
           <button ref={likedBtnRef} onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ fontSize: 14 }}>🤍</span>
+            <CartHeart liked={likedCount > 0} size={18} color="#9e8a6a" />
             {likedCount > 0 && <span style={{ background: '#1a1209', color: '#f5e6c8', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
           </button>
         </div>
@@ -604,7 +604,7 @@ export default function Catalogue() {
           </button>
           <button onClick={switchMode} style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>🗂️</button>
           <button ref={refLikedBtn} onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ fontSize: 14 }}>🤍</span>
+            <CartHeart liked={likedIds.length > 0} size={18} color="#9e8a6a" />
             {likedIds.length > 0 && <span style={{ background: '#f5e6c8', color: '#1a1209', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedIds.length}</span>}
           </button>
         </div>
