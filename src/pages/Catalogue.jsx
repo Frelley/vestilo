@@ -70,7 +70,7 @@ function PromoBanner({ dark }) {
       <span style={{ fontSize: 12, color: text, lineHeight: 1.4 }}>
         Comprá <span style={{ fontWeight: 700, color: accent }}>más de 6</span> camisetas
         {' '}y bajamos <span style={{ fontWeight: 700, color: accent }}>Bs. 5</span> a cada una
-        {' '}<span style={{ fontSize: 11, color: dark ? '#9e8a6a' : '#9e8a6a' }}>(mínimo Bs. 20 c/u)</span>
+        {' '}<span style={{ fontSize: 11, color: dark ? '#9e8a6a' : '#7a6651' }}>(mínimo Bs. 20 c/u)</span>
       </span>
     </div>
   )
@@ -212,15 +212,15 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 10 }}>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#1a1209' }}>Vestilo a tu sonso!</div>
-          <div style={{ fontSize: 9, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
+          <div style={{ fontSize: 10, color: '#7a6651', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => {}} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>
+          <button onClick={() => {}} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#7a6651', cursor: 'pointer' }}>
             Filtros
           </button>
-          <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>Swipe</button>
+          <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#7a6651', cursor: 'pointer' }}>Swipe</button>
           <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <CartHeart liked={likedCount > 0} size={18} color="#9e8a6a" />
+            <CartHeart liked={likedCount > 0} size={18} color="#7a6651" />
             {likedCount > 0 && <span style={{ background: '#1a1209', color: '#f5e6c8', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
           </button>
         </div>
@@ -239,7 +239,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
                   : <div style={{ aspectRatio: '3/4', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>👕</div>}
                 <div style={{ padding: '8px 10px 10px' }}>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#1a1209', marginBottom: 2 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#9e8a6a' }}>Talla {p.size}</div>
+                  <div style={{ fontSize: 11, color: '#7a6651' }}>Talla {p.size}</div>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginTop: 4 }}>Bs. {p.price}</div>
                 </div>
               </div>
@@ -263,7 +263,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           <span style={{ fontSize: 14 }}>📍</span>
           <span style={{ fontSize: 12, color: '#3d3020', fontWeight: 600 }}>Centro, calle Charcas · Santa Cruz</span>
         </div>
-        <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 8 }}>Retiro en ~1h · Lun–Sáb 10–18h · Coordinar por WhatsApp</div>
+        <div style={{ fontSize: 11, color: '#7a6651', marginTop: 8 }}>Retiro en ~1h · Lun–Sáb 10–18h · Coordinar por WhatsApp</div>
       </div>
     </div>
   )
@@ -372,7 +372,7 @@ export default function Catalogue() {
             style={{ width: '100%', background: isDark ? '#241810' : '#fff', color: isDark ? '#f5e6c8' : '#1a1209', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }}
           />
           {!searchQuery && !searchFocused && (
-            <div key={suggIdx} className="search-suggestion" style={{ color: isDark ? '#6b5a44' : '#b0a090' }}>
+            <div key={suggIdx} className="search-suggestion" style={{ color: isDark ? '#9e8a6a' : '#7a6651' }}>
               <span style={{ color: isDark ? '#9e8a6a' : '#9e8a6a' }}>Buscar con IA… </span>
               <span>ej: {SEARCH_SUGGESTIONS[suggIdx]}</span>
             </div>
@@ -382,15 +382,15 @@ export default function Catalogue() {
           {isSearching ? '…' : 'Buscar'}
         </button>
         {searchIds !== null && (
-          <button type="button" onClick={clearSearch} style={{ background: 'transparent', color: isDark ? '#9e8a6a' : '#9e8a6a', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <button type="button" onClick={clearSearch} style={{ background: 'transparent', color: isDark ? '#9e8a6a' : '#7a6651', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             ✕
           </button>
         )}
       </form>
       {searchIds !== null && (
-        <div style={{ fontSize: 11, color: '#9e8a6a', padding: '4px 4px 2px' }}>
+        <div style={{ fontSize: 11, color: isDark ? '#9e8a6a' : '#7a6651', padding: '4px 4px 2px' }}>
           {queue.length === 0
-            ? <span>Sin resultados · <button type="button" onClick={clearSearch} style={{ background: 'none', border: 'none', color: '#9e8a6a', textDecoration: 'underline', cursor: 'pointer', fontSize: 11, padding: 0 }}>Limpiar búsqueda</button></span>
+            ? <span>Sin resultados · <button type="button" onClick={clearSearch} style={{ background: 'none', border: 'none', color: isDark ? '#9e8a6a' : '#7a6651', textDecoration: 'underline', cursor: 'pointer', fontSize: 11, padding: 0 }}>Limpiar búsqueda</button></span>
             : `${queue.length} resultado${queue.length !== 1 ? 's' : ''}`}
         </div>
       )}
@@ -401,7 +401,7 @@ export default function Catalogue() {
     <>
       {searchBar(false)}
       <div style={{ display: 'flex', gap: 8, padding: '6px 12px', alignItems: 'center', justifyContent: 'flex-end' }}>
-        <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#f5e6c8' : 'transparent', color: hasFilter ? '#1a1209' : '#9e8a6a', border: `1px solid ${hasFilter ? '#c4b9a8' : '#e8e0d4'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#f5e6c8' : 'transparent', color: hasFilter ? '#1a1209' : '#7a6651', border: `1px solid ${hasFilter ? '#c4b9a8' : '#e8e0d4'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
           {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1209', display: 'inline-block' }} />}
           Filtros
         </button>
@@ -506,7 +506,7 @@ export default function Catalogue() {
 
       {/* Location */}
       <div style={{ textAlign: 'center', padding: '2px 0 4px' }}>
-        <span style={{ fontSize: 10, color: '#5a4a35', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro en ~1h · Lun–Sáb 10–18h</span>
+        <span style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro en ~1h · Lun–Sáb 10–18h</span>
       </div>
 
       {/* Promo */}
@@ -609,13 +609,13 @@ export default function Catalogue() {
                   <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>‹</span>
                 </div>
 
-                <div style={{ fontSize: 10, color: '#5a4a35', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, marginTop: 20 }}>Descripción</div>
+                <div style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, marginTop: 20 }}>Descripción</div>
                 <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
                 {current.cat && <span style={{ display: 'inline-block', alignSelf: 'flex-start', background: '#3d3020', color: '#c4b9a8', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', borderRadius: 4, padding: '3px 8px', marginBottom: 14 }}>{current.cat}</span>}
                 <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
                   {current.notes
                     ? <p style={{ color: '#c4b9a8', fontSize: 14, lineHeight: 1.75, margin: 0 }}>{current.notes}</p>
-                    : <p style={{ color: '#5a4a35', fontSize: 13, fontStyle: 'italic', margin: 0 }}>Sin descripción</p>}
+                    : <p style={{ color: '#9e8a6a', fontSize: 13, fontStyle: 'italic', margin: 0 }}>Sin descripción</p>}
                 </div>
                 <div style={{ borderTop: '1px solid #3d3020', paddingTop: 14 }}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -634,7 +634,7 @@ export default function Catalogue() {
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
                     {WA_SVG} Preguntar por WhatsApp
                   </a>
-                  <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11, color: '#5a4a35' }}>Deslizá para decidir · ‹ volver a fotos</div>
+                  <div style={{ textAlign: 'center', marginTop: 10, fontSize: 11, color: '#9e8a6a' }}>Deslizá para decidir · ‹ volver a fotos</div>
                 </div>
               </div>
               )}
