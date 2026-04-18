@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v4.4 (next: v4.5) ✓
+## Version: v4.5 (next: v4.6) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -113,6 +113,7 @@ v3.6 Bulk discount promo: buy 7+ shirts → Bs. 5 off each (floor Bs. 20/shirt).
 v3.7 Mode usage logging: mode_logs table in Supabase tracks every mode pick/switch. Admin "👆 Modos" tab shows swipe vs grid breakdown with % bars and event history.
 v3.8 Renamed "Mis favoritas" → "Lista de compra" throughout. Removed SpotlightOnboarding entirely (component, state, refs, steps).
 v3.9 UX: skip mode picker (auto-detect mobile→swipe, desktop→grid; preference saved). Zero-results search shows "Limpiar búsqueda" inline. Photo ‹ › arrows on swipe cards. Discount teaser shows ¡Casi! + projected savings. Grid scroll + filter state persists across /p/:id navigation (sessionStorage). Location updated to "Retiro en ~1h · Lun–Sáb 10–18h".
+v4.5 Haptic feedback: 15ms on like/heart, 8ms on skip, 20ms on order send. No-op on iOS.
 v4.4 Orders system: name modal before WA send creates order in DB, products auto-reserved. Admin "📋 Pedidos" tab: confirm sold (total price input, split per product) or liberar (back to Disponible). Run sql/orders.sql in Supabase first.
 v4.0 Swipe UX overhaul: description is now the last slide in the photo sequence (tap › to reach it, ‹ to go back — no more center-tap flip). Cart badge uses likedProducts.length (sold items no longer inflate count). Skip/like buttons get "pasar"/"me gusta" labels. Mode toggles are now text ("Ver todo"/"Swipe"). Counter and card area padding fixed to prevent clipping on short screens.
 
