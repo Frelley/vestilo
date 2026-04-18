@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v3.5 (next: v3.6) ✓
+## Version: v3.7 (next: v3.8) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -109,6 +109,8 @@ v3.2 Bulk actions: select mode toggle in admin toolbar (☐ Sel.), checkboxes on
 v3.3 AI color auto-detection: uploading the first photo calls /api/detect-colors (Claude Haiku) and pre-fills the color buttons if none are selected. Default price changed to 35 Bs.
 v3.4 Expanded colors (Beige, Azul marino, Vino) added to UI and AI detection. Tag dictionary: added camisa/hoodie/buzo garment types, fixed sudadera→hoodie bug (was wrongly mapping to franela material), added chompa/campera/sweatshirt synonyms.
 v3.5 Favorites page: removed WA onboarding overlay, WhatsApp button is now a floating pill fixed at bottom of screen.
+v3.6 Bulk discount promo: buy 7+ shirts → Bs. 5 off each (floor Bs. 20/shirt). PromoBanner in both swipe and grid modes. LikedList shows savings breakdown when discount applies, teaser countdown when below threshold. WA message auto-includes discount total.
+v3.7 Mode usage logging: mode_logs table in Supabase tracks every mode pick/switch. Admin "👆 Modos" tab shows swipe vs grid breakdown with % bars and event history.
 
 ## Rules
 1. Read file before editing

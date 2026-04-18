@@ -43,6 +43,36 @@ const WA_SVG = (
   </svg>
 )
 
+const BULK_MIN    = 6
+const BULK_DISC   = 5
+const PRICE_FLOOR = 20
+
+function bulkSavings(products) {
+  if (products.length <= BULK_MIN) return 0
+  return products.reduce((sum, p) => {
+    const price = parseFloat(p.price) || 0
+    return sum + Math.min(BULK_DISC, Math.max(0, price - PRICE_FLOOR))
+  }, 0)
+}
+
+// ── Promo banner ──────────────────────────────────────────────────────────────
+function PromoBanner({ dark }) {
+  const bg     = dark ? '#2a1f10' : '#fdf6e8'
+  const border = dark ? '#3d3020' : '#e8d9b0'
+  const text   = dark ? '#c4b9a8' : '#5a4020'
+  const accent = dark ? '#f5e6c8' : '#1a1209'
+  return (
+    <div style={{ margin: '4px 12px 0', background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 14 }}>🏷️</span>
+      <span style={{ fontSize: 12, color: text, lineHeight: 1.4 }}>
+        Comprá <span style={{ fontWeight: 700, color: accent }}>más de 6</span> camisetas
+        {' '}y bajamos <span style={{ fontWeight: 700, color: accent }}>Bs. 5</span> a cada una
+        {' '}<span style={{ fontSize: 11, color: dark ? '#9e8a6a' : '#9e8a6a' }}>(mínimo Bs. 20 c/u)</span>
+      </span>
+    </div>
+  )
+}
+
 // ── Spotlight Onboarding ──────────────────────────────────────────────────────
 function SpotlightOnboarding({ steps, onDone }) {
   const [stepIdx, setStepIdx] = useState(0)
@@ -219,8 +249,17 @@ function ModePicker({ onPick }) {
 
 // ── Liked list ────────────────────────────────────────────────────────────────
 function LikedList({ likedProducts, onBack, onRemove }) {
-  const waText = likedProducts.map(p => `• ${p.name} — Talla ${p.size} — Bs. ${p.price}`).join('\n')
-  const waUrl  = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
+  const savings   = bulkSavings(likedProducts)
+  const hasDisc   = savings > 0
+  const needed    = Math.max(0, BULK_MIN + 1 - likedProducts.length)
+  const origTotal = likedProducts.reduce((s, p) => s + (parseFloat(p.price) || 0), 0)
+  const discTotal = origTotal - savings
+
+  let waText = likedProducts.map(p => `• ${p.name} — Talla ${p.size} — Bs. ${p.price}`).join('\n')
+  if (hasDisc) {
+    waText += `\n\nSon ${likedProducts.length} camisetas → descuento de Bs. 5 c/u\nTotal con descuento: Bs. ${discTotal.toFixed(2)} (ahorro Bs. ${savings.toFixed(2)})`
+  }
+  const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column' }}>
@@ -235,22 +274,54 @@ function LikedList({ likedProducts, onBack, onRemove }) {
             <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, marginBottom: 8 }}>Todavía no guardaste nada</div>
             <div style={{ fontSize: 13 }}>Deslizá a la derecha las camisetas que te gusten</div>
           </div>
-        ) : likedProducts.map(p => {
-          const photo = getPhotos(p)[0]
-          return (
-            <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #3d3020' }}>
-              {photo
-                ? <img src={photo} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
-                : <div style={{ width: 56, height: 56, background: '#241810', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>👕</div>}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 14, fontWeight: 600 }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: '#9e8a6a' }}>Talla {p.size}{p.color ? ` · ${Array.isArray(p.color) ? p.color.join(', ') : p.color}` : ''}</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 14, fontWeight: 700, marginTop: 2 }}>Bs. {p.price}</div>
+        ) : (
+          <>
+            {likedProducts.map(p => {
+              const photo = getPhotos(p)[0]
+              return (
+                <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #3d3020' }}>
+                  {photo
+                    ? <img src={photo} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                    : <div style={{ width: 56, height: 56, background: '#241810', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>👕</div>}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 14, fontWeight: 600 }}>{p.name}</div>
+                    <div style={{ fontSize: 12, color: '#9e8a6a' }}>Talla {p.size}{p.color ? ` · ${Array.isArray(p.color) ? p.color.join(', ') : p.color}` : ''}</div>
+                    <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 14, fontWeight: 700, marginTop: 2 }}>Bs. {p.price}</div>
+                  </div>
+                  <button onClick={() => onRemove(p.id)} style={{ background: 'transparent', border: 'none', color: '#9e8a6a', fontSize: 18, cursor: 'pointer', padding: 8 }}>✕</button>
+                </div>
+              )
+            })}
+
+            {hasDisc ? (
+              <div style={{ margin: '16px 0 8px', background: '#1a2e18', border: '1px solid #2e5c23', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 12, color: '#4CAF50', fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>🎉</span> ¡Descuento por volumen aplicado!
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9e8a6a', marginBottom: 4 }}>
+                  <span>Subtotal ({likedProducts.length} prendas)</span>
+                  <span>Bs. {origTotal.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#4CAF50', marginBottom: 8 }}>
+                  <span>Descuento (Bs. 5 c/u)</span>
+                  <span>− Bs. {savings.toFixed(2)}</span>
+                </div>
+                <div style={{ borderTop: '1px solid #2e5c23', paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 15, fontWeight: 700 }}>Total estimado</span>
+                  <span style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 15, fontWeight: 700 }}>Bs. {discTotal.toFixed(2)}</span>
+                </div>
+                <div style={{ fontSize: 11, color: '#4CAF50', marginTop: 6, textAlign: 'center' }}>Ahorrás Bs. {savings.toFixed(2)} en este pedido</div>
               </div>
-              <button onClick={() => onRemove(p.id)} style={{ background: 'transparent', border: 'none', color: '#9e8a6a', fontSize: 18, cursor: 'pointer', padding: 8 }}>✕</button>
-            </div>
-          )
-        })}
+            ) : needed > 0 && likedProducts.length > 0 ? (
+              <div style={{ margin: '16px 0 8px', background: '#241810', border: '1px solid #3d3020', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>🏷️</span>
+                <div style={{ fontSize: 12, color: '#c4b9a8', lineHeight: 1.5 }}>
+                  Te falt{needed === 1 ? 'a' : 'an'} <span style={{ color: '#f5e6c8', fontWeight: 700 }}>{needed} más</span> para el descuento de <span style={{ color: '#f5e6c8', fontWeight: 700 }}>Bs. 5 por camiseta</span>
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
 
       {likedProducts.length > 0 && (
@@ -289,6 +360,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           </button>
         </div>
       </div>
+      <PromoBanner />
       {filterBar}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 12 }}>
         {products.map((p, pi) => {
@@ -401,14 +473,14 @@ export default function Catalogue() {
     setQueue(filtered); setIndex(0); setPhotoIdx(0)
   }, [filterSize, priceMax, products, searchIds])
 
-  function pickMode(m) {
+  function pickMode(m, action = 'pick') {
     setMode(m); saveMode(m)
+    supabase.from('mode_logs').insert({ mode: m, action }).then(() => {})
     if (!getOnboarded()) {
-      // slight delay so the UI renders first, then we measure rects
       setTimeout(() => setShowOnboarding(true), 350)
     }
   }
-  function switchMode() { pickMode(mode === 'swipe' ? 'grid' : 'swipe') }
+  function switchMode() { pickMode(mode === 'swipe' ? 'grid' : 'swipe', 'switch') }
   function toggleLike(p) {
     setLikedIds(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])
     recordInteraction(p.id, likedIds.includes(p.id) ? 'skip' : 'like')
@@ -617,6 +689,9 @@ export default function Catalogue() {
       <div style={{ textAlign: 'center', padding: '2px 0 4px' }}>
         <span style={{ fontSize: 10, color: '#5a4a35', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro disponible</span>
       </div>
+
+      {/* Promo */}
+      <PromoBanner dark />
 
       {/* Filters */}
       {showFilters && (

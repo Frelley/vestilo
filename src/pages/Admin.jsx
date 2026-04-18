@@ -116,6 +116,96 @@ function SearchLog() {
   )
 }
 
+function ModeLog() {
+  const [logs, setLogs]       = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.from('mode_logs').select('*').order('created_at', { ascending: false }).limit(500)
+      .then(({ data }) => { setLogs(data || []); setLoading(false) })
+  }, [])
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
+
+  const swipe = logs.filter(l => l.mode === 'swipe').length
+  const grid  = logs.filter(l => l.mode === 'grid').length
+  const total = swipe + grid
+  const swipePct = total ? Math.round((swipe / total) * 100) : 0
+  const gridPct  = total ? Math.round((grid  / total) * 100) : 0
+
+  const now        = new Date()
+  const dayStart   = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const weekStart  = new Date(dayStart.getTime() - 6 * 24 * 60 * 60 * 1000)
+  const todayLogs  = logs.filter(l => new Date(l.created_at) >= dayStart)
+  const weekLogs   = logs.filter(l => new Date(l.created_at) >= weekStart)
+
+  return (
+    <div style={{ padding: 16, maxWidth: 720 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
+        {[
+          ['Total', total,           '#1a1209'],
+          ['Swipe', swipe,           '#2e7d32'],
+          ['Catálogo', grid,         '#1565c0'],
+          ['Esta semana', weekLogs.length, '#9e8a6a'],
+        ].map(([label, val, color]) => (
+          <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px', borderTop: `3px solid ${color}` }}>
+            <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+          </div>
+        ))}
+      </div>
+
+      {total > 0 && (
+        <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, padding: '16px', marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>Preferencia de modo</div>
+          {[['👆 Swipe', swipePct, '#2e7d32'], ['🗂️ Catálogo', gridPct, '#1565c0']].map(([label, pct, color]) => (
+            <div key={label} style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#1a1209', marginBottom: 5 }}>
+                <span>{label}</span><span style={{ fontWeight: 700 }}>{pct}%</span>
+              </div>
+              <div style={{ background: '#f0ede8', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: color, width: `${pct}%`, borderRadius: 4, transition: 'width 0.4s ease' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8e0d4', fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1 }}>Historial reciente</div>
+        {logs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: '#9e8a6a', fontSize: 13 }}>Aún no hay registros</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: '#faf8f5' }}>
+                  {['Modo', 'Acción', 'Hace'].map(h => (
+                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600, borderBottom: '1px solid #e8e0d4' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {logs.slice(0, 100).map((l, i) => (
+                  <tr key={l.id} style={{ borderBottom: i < logs.length - 1 ? '1px solid #f0ede8' : 'none' }}>
+                    <td style={{ padding: '8px 12px' }}>
+                      <span style={{ fontWeight: 600, color: l.mode === 'swipe' ? '#2e7d32' : '#1565c0' }}>
+                        {l.mode === 'swipe' ? '👆 Swipe' : '🗂️ Catálogo'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', color: '#9e8a6a' }}>{l.action === 'pick' ? 'Elegido' : 'Cambió'}</td>
+                    <td style={{ padding: '8px 12px', color: '#9e8a6a', whiteSpace: 'nowrap' }}>{timeAgo(l.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const [products, setProducts]         = useState([])
   const [swipeStats, setSwipeStats]     = useState({})
@@ -323,6 +413,7 @@ export default function Admin() {
           ['archived', '🗄 Archivados'],
           ['bundles',  '📦 Lotes'],
           ['searches', '🔍 Búsquedas'],
+          ['modes',    '👆 Modos'],
         ].map(([key, label]) => (
           <button key={key} style={tabStyle(key)} onClick={() => { setActiveTab(key); setFilterStatus(''); setSelectMode(false); setSelected({}) }}>
             {label}
@@ -330,8 +421,8 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* Toolbar — hidden on Bundles and Searches tabs */}
-      {activeTab !== 'bundles' && activeTab !== 'searches' && (
+      {/* Toolbar — hidden on Bundles, Searches, and Modes tabs */}
+      {activeTab !== 'bundles' && activeTab !== 'searches' && activeTab !== 'modes' && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -422,6 +513,8 @@ export default function Admin() {
       {/* Content */}
       {activeTab === 'searches' ? (
         <SearchLog />
+      ) : activeTab === 'modes' ? (
+        <ModeLog />
       ) : activeTab === 'bundles' ? (
         <BundleManager />
       ) : loading ? (
