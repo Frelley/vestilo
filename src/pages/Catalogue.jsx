@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getProductsSorted, supabase } from '../lib/supabase.js'
 import { SIZES, COLOR_DOTS, WA_NUMBER, colorsArray } from '../lib/constants.js'
@@ -7,7 +7,6 @@ import CartHeart from '../components/CartHeart.jsx'
 const SWIPE_THRESHOLD = 75
 const STORAGE_KEY     = 'vestilo-liked'
 const MODE_KEY        = 'vestilo-mode'
-const ONBOARDING_KEY    = 'vestilo-onboarded'
 
 const SEARCH_SUGGESTIONS = [
   'algo para el gym',
@@ -22,8 +21,6 @@ const SEARCH_SUGGESTIONS = [
   'algo minimalista',
 ]
 
-function getOnboarded()    { try { return localStorage.getItem(ONBOARDING_KEY) === '1' } catch { return false } }
-function saveOnboarded()   { try { localStorage.setItem(ONBOARDING_KEY, '1') } catch {} }
 function getLiked()      { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] } }
 function saveLiked(ids)  { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)) } catch {} }
 function getSavedMode()  { try { return localStorage.getItem(MODE_KEY) || null } catch { return null } }
@@ -73,154 +70,6 @@ function PromoBanner({ dark }) {
   )
 }
 
-// ── Spotlight Onboarding ──────────────────────────────────────────────────────
-function SpotlightOnboarding({ steps, onDone }) {
-  const [stepIdx, setStepIdx] = useState(0)
-  const [rect, setRect]       = useState(null)
-
-  const step   = steps[stepIdx]
-  const isLast = stepIdx === steps.length - 1
-
-  useEffect(() => {
-    if (!step?.ref?.current) { setRect(null); return }
-    // Small delay ensures layout is settled (especially for bottom-fixed elements)
-    const t = setTimeout(() => {
-      const r = step.ref.current.getBoundingClientRect()
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
-    }, 50)
-    return () => clearTimeout(t)
-  }, [stepIdx])
-
-  function next() {
-    if (isLast) { onDone() } else { setStepIdx(i => i + 1) }
-  }
-
-  if (!step) return null
-
-  const PAD  = 8
-  const vw   = window.innerWidth
-  const vh   = window.innerHeight
-  const TW   = Math.min(vw - 32, 280)
-  const TH   = 150   // estimated tooltip height
-  const AS   = 10    // arrow size
-
-  // Spotlight bounds
-  const sTop  = rect ? rect.top    - PAD : vh / 2 - 20
-  const sLeft = rect ? rect.left   - PAD : vw / 2 - 20
-  const sW    = rect ? rect.width  + PAD * 2 : 40
-  const sH    = rect ? rect.height + PAD * 2 : 40
-  const sCx   = sLeft + sW / 2  // center x of spotlight
-  const sCy   = sTop  + sH / 2  // center y of spotlight
-
-  // Auto-decide: put tooltip above if element is in bottom half, below if top half
-  const placeAbove = sCy > vh / 2
-
-  let tooltipTop, tooltipLeft, arrowStyle
-
-  if (placeAbove) {
-    // Tooltip above spotlight, arrow points down toward element
-    tooltipTop  = Math.max(8, sTop - TH - AS - 6)
-    tooltipLeft = Math.min(Math.max(16, sCx - TW / 2), vw - TW - 16)
-    const ax    = Math.max(AS + 4, Math.min(sCx - tooltipLeft - AS, TW - AS * 3))
-    arrowStyle  = {
-      position: 'absolute', bottom: -(AS * 2) + 1, left: ax,
-      width: 0, height: 0,
-      borderLeft:  `${AS}px solid transparent`,
-      borderRight: `${AS}px solid transparent`,
-      borderTop:   `${AS * 2}px solid #f5e6c8`,
-    }
-  } else {
-    // Tooltip below spotlight, arrow points up toward element
-    tooltipTop  = Math.min(sTop + sH + AS + 6, vh - TH - 8)
-    tooltipLeft = Math.min(Math.max(16, sCx - TW / 2), vw - TW - 16)
-    const ax    = Math.max(AS + 4, Math.min(sCx - tooltipLeft - AS, TW - AS * 3))
-    arrowStyle  = {
-      position: 'absolute', top: -(AS * 2) + 1, left: ax,
-      width: 0, height: 0,
-      borderLeft:   `${AS}px solid transparent`,
-      borderRight:  `${AS}px solid transparent`,
-      borderBottom: `${AS * 2}px solid #f5e6c8`,
-    }
-  }
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 500, pointerEvents: 'none' }}>
-      <style>{`
-        @keyframes pulse-ring {
-          0%   { box-shadow: 0 0 0 0 rgba(245,230,200,0.55); }
-          70%  { box-shadow: 0 0 0 14px rgba(245,230,200,0); }
-          100% { box-shadow: 0 0 0 0 rgba(245,230,200,0); }
-        }
-        @keyframes tooltip-in {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
-      {/* Dark overlay with cutout */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        <defs>
-          <mask id="spotlight-mask">
-            <rect width="100%" height="100%" fill="white" />
-            {rect && <rect x={sLeft} y={sTop} width={sW} height={sH} rx={10} ry={10} fill="black" />}
-          </mask>
-        </defs>
-        <rect width="100%" height="100%" fill="rgba(0,0,0,0.8)" mask="url(#spotlight-mask)" />
-      </svg>
-
-      {/* Pulsing ring */}
-      {rect && (
-        <div style={{
-          position: 'absolute', top: sTop, left: sLeft, width: sW, height: sH,
-          borderRadius: 10, border: '2px solid rgba(245,230,200,0.9)',
-          animation: 'pulse-ring 1.8s ease-out infinite', pointerEvents: 'none',
-        }} />
-      )}
-
-      {/* Tooltip */}
-      <div style={{
-        position: 'absolute', top: tooltipTop, left: tooltipLeft, width: TW,
-        background: '#f5e6c8', borderRadius: 14, padding: '14px 16px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
-        pointerEvents: 'all',
-        animation: 'tooltip-in 0.25s ease',
-      }}>
-        {/* Arrow */}
-        <div style={{ position: 'relative' }}>
-          <div style={arrowStyle} />
-        </div>
-
-        {/* Progress dots */}
-        {steps.length > 1 && (
-          <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
-            {steps.map((_, i) => (
-              <div key={i} style={{
-                width: i === stepIdx ? 16 : 6, height: 6, borderRadius: 3,
-                background: i === stepIdx ? '#1a1209' : '#c4b9a8',
-                transition: 'width 0.2s',
-              }} />
-            ))}
-          </div>
-        )}
-
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginBottom: 5 }}>
-          {step.title}
-        </div>
-        <div style={{ fontSize: 12, color: '#3d3020', lineHeight: 1.55, marginBottom: 14 }}>
-          {step.desc}
-        </div>
-        <button onClick={next} style={{
-          width: '100%', padding: '9px', borderRadius: 8,
-          background: '#1a1209', color: '#f5e6c8', border: 'none',
-          fontSize: 13, fontWeight: 700, cursor: 'pointer',
-        }}>
-          {isLast ? '¡Entendido! ✓' : 'Siguiente →'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── Mode picker ───────────────────────────────────────────────────────────────
 function ModePicker({ onPick }) {
   return (
@@ -231,7 +80,7 @@ function ModePicker({ onPick }) {
       <div style={{ fontSize: 13, color: '#7a6a55', marginBottom: 20, textAlign: 'center' }}>¿Cómo querés explorar?</div>
       <div style={{ display: 'flex', gap: 14, width: '100%', maxWidth: 340 }}>
         {[
-          { key: 'swipe', icon: '👆', label: 'Swipe', desc: 'Desliza una por una y guarda tus favoritas' },
+          { key: 'swipe', icon: '👆', label: 'Swipe', desc: 'Desliza una por una y armá tu lista de compra' },
           { key: 'grid',  icon: '🗂️', label: 'Catálogo', desc: 'Ve todas las prendas en una cuadrícula' },
         ].map(opt => (
           <button key={opt.key} onClick={() => onPick(opt.key)} className="mode-card" style={{
@@ -265,7 +114,7 @@ function LikedList({ likedProducts, onBack, onRemove }) {
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 12px' }}>
         <button onClick={onBack} style={{ background: 'transparent', border: 'none', color: '#9e8a6a', fontSize: 20, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700 }}>Mis favoritas ({likedProducts.length})</div>
+        <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700 }}>Lista de compra ({likedProducts.length})</div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px', paddingBottom: likedProducts.length > 0 ? 96 : 16 }}>
         {likedProducts.length === 0 ? (
@@ -335,7 +184,7 @@ function LikedList({ likedProducts, onBack, onRemove }) {
 }
 
 // ── Grid view ─────────────────────────────────────────────────────────────────
-function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked, filterBtnRef, likedBtnRef }) {
+function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked }) {
   const navigate   = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
   const likedCount = likedIds.length
@@ -350,11 +199,11 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           <div style={{ fontSize: 9, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button ref={filterBtnRef} onClick={() => {}} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>
+          <button onClick={() => {}} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>
             Filtros
           </button>
           <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>👆</button>
-          <button ref={likedBtnRef} onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             <CartHeart liked={likedCount > 0} size={18} color="#9e8a6a" />
             {likedCount > 0 && <span style={{ background: '#1a1209', color: '#f5e6c8', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
           </button>
@@ -421,7 +270,6 @@ export default function Catalogue() {
   const [swipeDir, setSwipeDir]   = useState(null)
   const [photoIdx, setPhotoIdx]   = useState(0)
   const [flipped, setFlipped]     = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
   const [searchQuery, setSearchQuery]     = useState('')
   const [searchIds, setSearchIds]         = useState(null)   // null = no search active
   const [isSearching, setIsSearching]     = useState(false)
@@ -436,17 +284,6 @@ export default function Catalogue() {
 
   const dragRef = useRef(drag)
   dragRef.current = drag
-
-  // Refs for onboarding targets
-  const refLikeBtn    = useRef(null)
-  const refSkipBtn    = useRef(null)
-  const refFilterBtn  = useRef(null)
-  const refLikedBtn   = useRef(null)
-  const refCardArea   = useRef(null)
-
-  // Grid refs
-  const refGridFilter = useRef(null)
-  const refGridLiked  = useRef(null)
 
   useEffect(() => { load() }, [])
   useEffect(() => { saveLiked(likedIds) }, [likedIds])
@@ -476,9 +313,6 @@ export default function Catalogue() {
   function pickMode(m, action = 'pick') {
     setMode(m); saveMode(m)
     supabase.from('mode_logs').insert({ mode: m, action }).then(() => {})
-    if (!getOnboarded()) {
-      setTimeout(() => setShowOnboarding(true), 350)
-    }
   }
   function switchMode() { pickMode(mode === 'swipe' ? 'grid' : 'swipe', 'switch') }
   function toggleLike(p) {
@@ -502,22 +336,6 @@ export default function Catalogue() {
   }
 
   function clearSearch() { setSearchQuery(''); setSearchIds(null) }
-
-  // Onboarding steps per mode
-  const swipeSteps = [
-    { ref: refCardArea,  title: 'Deslizá la tarjeta',        desc: 'Deslizá a la derecha si te gusta, a la izquierda para pasar. También podés usar los botones de abajo.' },
-    { ref: refLikeBtn,   title: '♥ Guardá favoritas',        desc: 'Tocá el corazón para agregar esta prenda a tu lista de favoritas.' },
-    { ref: refSkipBtn,   title: '✕ Pasá a la siguiente',     desc: 'Tocá la X para ver la siguiente prenda sin guardarla.' },
-    { ref: refFilterBtn, title: 'Filtrá por talla o precio', desc: 'Tocá "Filtros" para ver solo las prendas que te quedan y están dentro de tu presupuesto.' },
-    { ref: refLikedBtn,  title: 'Tu lista de favoritas',     desc: 'Acá aparecen todas las que guardaste. Cuando termines, podés pedir todo junto por WhatsApp.' },
-  ]
-
-  const gridSteps = [
-    { ref: refGridFilter, title: 'Filtrá por talla o precio', desc: 'Usá los filtros para encontrar rápido lo que buscás por talla o presupuesto.' },
-    { ref: refGridLiked,  title: 'Guardá tus favoritas',      desc: 'Tocá el 🤍 en cualquier prenda para guardarla. Después podés pedir todo junto por WhatsApp.' },
-  ]
-
-  const onboardingSteps = mode === 'swipe' ? swipeSteps : gridSteps
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -592,20 +410,11 @@ export default function Catalogue() {
   )
 
   if (mode === 'grid') return (
-    <>
-      <GridView
-        products={queue} likedIds={likedIds} onToggleLike={toggleLike}
-        onSwitchMode={switchMode} filterBar={filterBar}
-        likedProducts={likedProducts} onRemoveLiked={removeLiked}
-        filterBtnRef={refGridFilter} likedBtnRef={refGridLiked}
-      />
-      {showOnboarding && (
-        <SpotlightOnboarding
-          steps={gridSteps}
-          onDone={() => { setShowOnboarding(false); saveOnboarded() }}
-        />
-      )}
-    </>
+    <GridView
+      products={queue} likedIds={likedIds} onToggleLike={toggleLike}
+      onSwitchMode={switchMode} filterBar={filterBar}
+      likedProducts={likedProducts} onRemoveLiked={removeLiked}
+    />
   )
 
   // ── Swipe mode ────────────────────────────────────────────────────────────
@@ -670,12 +479,12 @@ export default function Catalogue() {
           <div style={{ color: '#9e8a6a', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button ref={refFilterBtn} onClick={() => setShowFilters(f => !f)} style={{ background: showFilters ? '#f5e6c8' : 'transparent', color: showFilters ? '#1a1209' : '#9e8a6a', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button onClick={() => setShowFilters(f => !f)} style={{ background: showFilters ? '#f5e6c8' : 'transparent', color: showFilters ? '#1a1209' : '#9e8a6a', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: showFilters ? '#1a1209' : '#f5e6c8', display: 'inline-block' }} />}
             Filtros
           </button>
           <button onClick={switchMode} style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#9e8a6a', cursor: 'pointer' }}>🗂️</button>
-          <button ref={refLikedBtn} onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             <CartHeart liked={likedIds.length > 0} size={18} color="#9e8a6a" />
             {likedIds.length > 0 && <span style={{ background: '#f5e6c8', color: '#1a1209', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedIds.length}</span>}
           </button>
@@ -711,15 +520,15 @@ export default function Catalogue() {
       )}
 
       {/* Card area */}
-      <div ref={refCardArea} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px', paddingBottom: 100 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 16px', paddingBottom: 100 }}>
         {!current ? (
           <div style={{ textAlign: 'center', color: '#9e8a6a', padding: 40 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
             <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 20, marginBottom: 8 }}>¡Eso es todo!</div>
-            <div style={{ fontSize: 13, marginBottom: 24 }}>{likedIds.length > 0 ? `Tenés ${likedIds.length} favorito${likedIds.length !== 1 ? 's' : ''} guardado${likedIds.length !== 1 ? 's' : ''}` : 'No había prendas con esos filtros'}</div>
+            <div style={{ fontSize: 13, marginBottom: 24 }}>{likedIds.length > 0 ? `Tenés ${likedIds.length} prenda${likedIds.length !== 1 ? 's' : ''} en tu lista` : 'No había prendas con esos filtros'}</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={restart} style={{ background: 'transparent', color: '#f5e6c8', border: '1px solid #3d3020', borderRadius: 8, padding: '10px 18px', fontSize: 13, cursor: 'pointer' }}>Ver de nuevo</button>
-              {likedIds.length > 0 && <button onClick={() => setShowLiked(true)} style={{ background: '#f5e6c8', color: '#1a1209', border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Ver favoritos ({likedIds.length})</button>}
+              {likedIds.length > 0 && <button onClick={() => setShowLiked(true)} style={{ background: '#f5e6c8', color: '#1a1209', border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Ver lista de compra ({likedIds.length})</button>}
             </div>
           </div>
         ) : (
@@ -814,9 +623,9 @@ export default function Catalogue() {
       {/* Action buttons */}
       {current && (
         <div style={{ position: 'fixed', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20, alignItems: 'center', zIndex: 10 }}>
-          <button ref={refSkipBtn} onClick={doSkip} className="action-btn"
+          <button onClick={doSkip} className="action-btn"
             style={{ width: 56, height: 56, background: '#241810', border: '2px solid #ef5350', color: '#ef5350', fontSize: 22, boxShadow: '0 4px 18px rgba(239,83,80,0.28)' }}>✕</button>
-          <button ref={refLikeBtn} onClick={doLike} className="action-btn"
+          <button onClick={doLike} className="action-btn"
             style={{ width: 64, height: 64, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', boxShadow: '0 4px 22px rgba(76,175,80,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CartHeart liked size={28} /></button>
         </div>
@@ -827,12 +636,6 @@ export default function Catalogue() {
         </div>
       )}
 
-      {showOnboarding && (
-        <SpotlightOnboarding
-          steps={swipeSteps}
-          onDone={() => { setShowOnboarding(false); saveOnboarded() }}
-        />
-      )}
     </div>
   )
 }
