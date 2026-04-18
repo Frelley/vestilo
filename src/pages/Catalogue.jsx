@@ -643,8 +643,8 @@ export default function Catalogue() {
         )}
       </div>
 
-      {/* Action buttons */}
-      {current && (
+      {/* Action buttons — full size centred on photo slides, small side pills on description slide */}
+      {current && (photoIdx < photos.length ? (
         <div style={{ position: 'fixed', bottom: 28, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20, alignItems: 'center', zIndex: 10 }}>
           <button onClick={doSkip} className="action-btn"
             style={{ width: 60, height: 60, background: '#241810', border: '2px solid #ef5350', color: '#ef5350', boxShadow: '0 4px 18px rgba(239,83,80,0.28)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
@@ -657,8 +657,17 @@ export default function Catalogue() {
             <span style={{ fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', color: '#4CAF50' }}>me gusta</span>
           </button>
         </div>
-      )}
-      {queue.length > 0 && current && (
+      ) : (
+        <>
+          <button onClick={doSkip} className="action-btn"
+            style={{ position: 'fixed', left: 12, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: '#241810', border: '2px solid #ef5350', color: '#ef5350', boxShadow: '0 2px 12px rgba(239,83,80,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, fontSize: 16 }}>✕</button>
+          <button onClick={doLike} className="action-btn"
+            style={{ position: 'fixed', right: 12, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', boxShadow: '0 2px 12px rgba(76,175,80,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+            <CartHeart liked size={20} />
+          </button>
+        </>
+      ))}
+      {queue.length > 0 && current && photoIdx < photos.length && (
         <div style={{ position: 'fixed', bottom: 106, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
           <span style={{ fontSize: 11, color: '#9e8a6a' }}>{index + 1} / {queue.length}</span>
         </div>
