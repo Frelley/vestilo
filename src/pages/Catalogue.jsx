@@ -231,7 +231,7 @@ function LikedList({ likedProducts, onBack, onRemove }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px', paddingBottom: likedProducts.length > 0 ? 96 : 16 }}>
         {likedProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🤍</div>
+            <CartHeart liked={false} size={56} color="#9e8a6a" style={{ marginBottom: 12 }} />
             <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 16, marginBottom: 8 }}>Todavía no guardaste nada</div>
             <div style={{ fontSize: 13 }}>Deslizá a la derecha las camisetas que te gusten</div>
           </div>
