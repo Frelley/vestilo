@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getProducts, updateProduct, deleteProduct, freeLabel, supabase } from '../lib/supabase.js'
+import { getProducts, updateProduct, deleteProduct, freeLabel, supabase, getOrders, confirmOrderSold, releaseOrder } from '../lib/supabase.js'
 import CartHeart from '../components/CartHeart.jsx'
 import { STATUS_STYLES, daysSince, formatDate, colorsArray } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
@@ -202,6 +202,171 @@ function ModeLog() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function OrdersPanel({ products, onRefresh }) {
+  const [orders,          setOrders]          = useState([])
+  const [loading,         setLoading]         = useState(true)
+  const [confirmingId,    setConfirmingId]     = useState(null)
+  const [salePrice,       setSalePrice]        = useState('')
+  const [saving,          setSaving]           = useState(false)
+  const { toast, show }                        = useToast()
+
+  useEffect(() => {
+    getOrders().then(({ data }) => { setOrders(data || []); setLoading(false) })
+  }, [])
+
+  function getOrderProducts(order) {
+    return (order.product_ids || []).map(id => products.find(p => p.id === id)).filter(Boolean)
+  }
+
+  function startConfirm(order) {
+    const suggested = ((order.nominal_total || 0) - (order.discount || 0)).toFixed(2)
+    setSalePrice(suggested)
+    setConfirmingId(order.id)
+  }
+
+  async function handleConfirmSold(order) {
+    const total = parseFloat(salePrice)
+    if (!total || total <= 0) return
+    setSaving(true)
+    const prods = getOrderProducts(order)
+    await confirmOrderSold(order.id, total, prods)
+    await Promise.all(prods.map(p => freeLabel(p.size, p.name)))
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'sold', sold_total: total } : o))
+    setConfirmingId(null)
+    setSaving(false)
+    show('Venta registrada ✓')
+    onRefresh()
+  }
+
+  async function handleRelease(order) {
+    await releaseOrder(order.id, order.product_ids || [])
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'released' } : o))
+    show('Pedido liberado')
+    onRefresh()
+  }
+
+  const pending  = orders.filter(o => o.status === 'pending')
+  const resolved = orders.filter(o => o.status !== 'pending')
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
+
+  return (
+    <div style={{ padding: 16, maxWidth: 720 }}>
+      <Toast toast={toast} />
+      {orders.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
+          <div style={{ fontFamily: "'Playfair Display', serif" }}>No hay pedidos todavía</div>
+        </div>
+      )}
+
+      {pending.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Pendientes ({pending.length})</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+            {pending.map(order => {
+              const prods     = getOrderProducts(order)
+              const isConfirming = confirmingId === order.id
+              const nominal   = (order.nominal_total || 0) - (order.discount || 0)
+              return (
+                <div key={order.id} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 12, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8e0d4', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: '#1a1209', fontSize: 15 }}>{order.customer_name}</div>
+                      <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 2 }}>#{order.ref} · {timeAgo(order.created_at)}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: '#1a1209' }}>Bs. {nominal.toFixed(2)}</div>
+                      {order.discount > 0 && <div style={{ fontSize: 11, color: '#4CAF50' }}>− Bs. {order.discount} dto.</div>}
+                    </div>
+                  </div>
+                  <div style={{ padding: '10px 16px', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {prods.map(p => {
+                      const photo = p.photos?.[0] || p.photo_url
+                      return (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#faf8f5', borderRadius: 8, padding: '6px 10px', border: '1px solid #e8e0d4' }}>
+                          {photo
+                            ? <img src={photo} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4 }} />
+                            : <div style={{ width: 32, height: 32, background: '#f0ede8', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👕</div>}
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1209' }}>{p.name}</div>
+                            <div style={{ fontSize: 11, color: '#9e8a6a' }}>Talla {p.size} · Bs. {p.price}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {(order.product_ids?.length || 0) > prods.length && (
+                      <div style={{ fontSize: 12, color: '#9e8a6a', alignSelf: 'center' }}>+{order.product_ids.length - prods.length} más</div>
+                    )}
+                  </div>
+                  {isConfirming ? (
+                    <div style={{ padding: '12px 16px', borderTop: '1px solid #e8e0d4', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 13, color: '#1a1209', fontWeight: 600, marginRight: 4 }}>Total vendido (Bs.)</div>
+                      <input
+                        type="number"
+                        value={salePrice}
+                        onChange={e => setSalePrice(e.target.value)}
+                        style={{ width: 100, padding: '8px 10px', borderRadius: 8, border: '1px solid #e8e0d4', fontSize: 14, fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleConfirmSold(order)}
+                        disabled={saving || !parseFloat(salePrice)}
+                        style={{ padding: '8px 16px', background: '#c62828', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                      >
+                        {saving ? 'Guardando…' : 'Confirmar vendido'}
+                      </button>
+                      <button onClick={() => setConfirmingId(null)} style={{ padding: '8px 12px', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 8, color: '#9e8a6a', fontSize: 13, cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '10px 16px', borderTop: '1px solid #e8e0d4', display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => startConfirm(order)}
+                        style={{ flex: 1, padding: '9px', background: '#ffebee', color: '#c62828', border: '1px solid #ffcdd2', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                      >
+                        Confirmar vendido
+                      </button>
+                      <button
+                        onClick={() => handleRelease(order)}
+                        style={{ flex: 1, padding: '9px', background: '#e8f5e9', color: '#2e7d32', border: '1px solid #c8e6c9', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                      >
+                        Liberar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {resolved.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Historial</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {resolved.map(order => (
+              <div key={order.id} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.7 }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: '#1a1209', fontSize: 14 }}>{order.customer_name}</div>
+                  <div style={{ fontSize: 11, color: '#9e8a6a' }}>#{order.ref} · {timeAgo(order.created_at)}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: order.status === 'sold' ? '#ffebee' : '#f0ede8', color: order.status === 'sold' ? '#c62828' : '#9e8a6a' }}>
+                    {order.status === 'sold' ? `Vendido · Bs. ${order.sold_total}` : 'Liberado'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -411,6 +576,7 @@ export default function Admin() {
           ['sold',     'Vendidos'],
           ['old',      '+30 días'],
           ['archived', '🗄 Archivados'],
+          ['orders',   '📋 Pedidos'],
           ['bundles',  '📦 Lotes'],
           ['searches', '🔍 Búsquedas'],
           ['modes',    '👆 Modos'],
@@ -421,8 +587,8 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* Toolbar — hidden on Bundles, Searches, and Modes tabs */}
-      {activeTab !== 'bundles' && activeTab !== 'searches' && activeTab !== 'modes' && (
+      {/* Toolbar — hidden on Orders, Bundles, Searches, and Modes tabs */}
+      {activeTab !== 'orders' && activeTab !== 'bundles' && activeTab !== 'searches' && activeTab !== 'modes' && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -511,7 +677,9 @@ export default function Admin() {
       )}
 
       {/* Content */}
-      {activeTab === 'searches' ? (
+      {activeTab === 'orders' ? (
+        <OrdersPanel products={products} onRefresh={load} />
+      ) : activeTab === 'searches' ? (
         <SearchLog />
       ) : activeTab === 'modes' ? (
         <ModeLog />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getProductsSorted, supabase } from '../lib/supabase.js'
+import { getProductsSorted, supabase, createOrder } from '../lib/supabase.js'
 import { SIZES, COLOR_DOTS, WA_NUMBER, colorsArray } from '../lib/constants.js'
 import CartHeart from '../components/CartHeart.jsx'
 
@@ -48,6 +48,10 @@ const WA_SVG = (
 
 const BULK_MIN    = 6
 const BULK_DISC   = 5
+
+function genRef() {
+  return Math.random().toString(36).slice(2, 5).toUpperCase()
+}
 const PRICE_FLOOR = 20
 
 function bulkSavings(products) {
@@ -104,6 +108,11 @@ function ModePicker({ onPick }) {
 
 // ── Liked list ────────────────────────────────────────────────────────────────
 function LikedList({ likedProducts, onBack, onRemove }) {
+  const [showNameModal, setShowNameModal] = useState(false)
+  const [customerName,  setCustomerName]  = useState('')
+  const [submitting,    setSubmitting]    = useState(false)
+  const [orderDone,     setOrderDone]     = useState(false)
+
   const savings          = bulkSavings(likedProducts)
   const hasDisc          = savings > 0
   const needed           = Math.max(0, BULK_MIN + 1 - likedProducts.length)
@@ -118,7 +127,25 @@ function LikedList({ likedProducts, onBack, onRemove }) {
   if (hasDisc) {
     waText += `\n\nSon ${likedProducts.length} camisetas → descuento de Bs. 5 c/u\nTotal con descuento: Bs. ${discTotal.toFixed(2)} (ahorro Bs. ${savings.toFixed(2)})`
   }
-  const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?`)}`
+
+  async function handleSendOrder() {
+    if (!customerName.trim()) return
+    setSubmitting(true)
+    const ref        = genRef()
+    const productIds = likedProducts.map(p => p.id)
+    const fullText   = `Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?\n\nPedido: #${ref}`
+    await createOrder({
+      ref,
+      customerName: customerName.trim(),
+      productIds,
+      nominalTotal: origTotal,
+      discount:     savings,
+      waMessage:    fullText,
+    }).catch(() => {})
+    setSubmitting(false)
+    setOrderDone(true)
+    window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(fullText)}`, '_blank')
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column' }}>
@@ -184,10 +211,55 @@ function LikedList({ likedProducts, onBack, onRemove }) {
       </div>
 
       {likedProducts.length > 0 && (
-        <a href={waUrl} target="_blank" rel="noopener noreferrer"
-          style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 50, padding: '14px 24px', fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(37,211,102,0.45)', whiteSpace: 'nowrap', zIndex: 100 }}>
+        <button
+          onClick={() => { setOrderDone(false); setShowNameModal(true) }}
+          style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8, background: '#25D366', color: '#fff', borderRadius: 50, padding: '14px 24px', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,211,102,0.45)', whiteSpace: 'nowrap', zIndex: 100 }}
+        >
           {WA_SVG} Pedir por WhatsApp ({likedProducts.length})
-        </a>
+        </button>
+      )}
+
+      {showNameModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: '#1a1209', borderRadius: 16, padding: 28, width: '100%', maxWidth: 340, boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}>
+            {orderDone ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>✓</div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Pedido registrado</div>
+                  <div style={{ fontSize: 13, color: '#9e8a6a', lineHeight: 1.5 }}>Las prendas quedan apartadas mientras confirmamos tu pedido por WhatsApp.</div>
+                </div>
+                <button onClick={() => setShowNameModal(false)} style={{ width: '100%', padding: '12px', background: '#f5e6c8', color: '#1a1209', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+                  Listo
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 17, fontWeight: 700, marginBottom: 6 }}>¿Cómo te llaman en WhatsApp?</div>
+                <div style={{ fontSize: 13, color: '#9e8a6a', marginBottom: 18 }}>Para que podamos identificar tu pedido</div>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Tu nombre"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !submitting && customerName.trim() && handleSendOrder()}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid #3d3020', background: '#241810', color: '#f5e6c8', fontSize: 15, marginBottom: 14, boxSizing: 'border-box' }}
+                />
+                <button
+                  onClick={handleSendOrder}
+                  disabled={submitting || !customerName.trim()}
+                  style={{ width: '100%', padding: '12px', background: submitting || !customerName.trim() ? '#3d3020' : '#25D366', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting || !customerName.trim() ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}
+                >
+                  {submitting ? 'Registrando…' : <>{WA_SVG} Enviar pedido</>}
+                </button>
+                <button onClick={() => setShowNameModal(false)} style={{ width: '100%', padding: '10px', background: 'transparent', color: '#9e8a6a', border: 'none', fontSize: 13, cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

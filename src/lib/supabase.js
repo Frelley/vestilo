@@ -250,6 +250,43 @@ export async function uploadPhoto(file, productId) {
   return data.publicUrl
 }
 
+// ─── Orders ──────────────────────────────────────────────────────────────────
+export async function createOrder({ ref, customerName, productIds, nominalTotal, discount, waMessage }) {
+  await supabase.from('products').update({ status: 'Reservado' }).in('id', productIds)
+  return supabase.from('orders').insert([{
+    ref,
+    customer_name: customerName,
+    product_ids: productIds,
+    nominal_total: nominalTotal,
+    discount,
+    wa_message: waMessage,
+  }]).select().single()
+}
+
+export async function getOrders() {
+  return supabase.from('orders').select('*').order('created_at', { ascending: false })
+}
+
+export async function confirmOrderSold(orderId, soldTotal, products) {
+  const nominalTotal = products.reduce((s, p) => s + (parseFloat(p.price) || 0), 0)
+  const rate         = nominalTotal > 0 ? soldTotal / nominalTotal : 1
+  const soldAt       = new Date().toISOString()
+  await Promise.all(products.map(p => {
+    const nominal   = parseFloat(p.price) || 0
+    const soldPrice = Math.round(nominal * rate * 100) / 100
+    const disc      = Math.max(0, Math.round((nominal - soldPrice) * 100) / 100)
+    return supabase.from('products').update({
+      status: 'Vendido', sold_price: soldPrice, discount: disc, sold_at: soldAt,
+    }).eq('id', p.id)
+  }))
+  return supabase.from('orders').update({ status: 'sold', sold_total: soldTotal }).eq('id', orderId).select().single()
+}
+
+export async function releaseOrder(orderId, productIds) {
+  await supabase.from('products').update({ status: 'Disponible' }).in('id', productIds)
+  return supabase.from('orders').update({ status: 'released' }).eq('id', orderId).select().single()
+}
+
 // ─── Bundles ─────────────────────────────────────────────────────────────────
 export async function createBundle(bundleData) {
   return supabase.from('bundles').insert([bundleData]).select().single()
