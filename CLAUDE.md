@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v3.8 (next: v3.9) ✓
+## Version: v3.9 (next: v4.0) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -112,6 +112,7 @@ v3.5 Favorites page: removed WA onboarding overlay, WhatsApp button is now a flo
 v3.6 Bulk discount promo: buy 7+ shirts → Bs. 5 off each (floor Bs. 20/shirt). PromoBanner in both swipe and grid modes. LikedList shows savings breakdown when discount applies, teaser countdown when below threshold. WA message auto-includes discount total.
 v3.7 Mode usage logging: mode_logs table in Supabase tracks every mode pick/switch. Admin "👆 Modos" tab shows swipe vs grid breakdown with % bars and event history.
 v3.8 Renamed "Mis favoritas" → "Lista de compra" throughout. Removed SpotlightOnboarding entirely (component, state, refs, steps).
+v3.9 UX: skip mode picker (auto-detect mobile→swipe, desktop→grid; preference saved). Zero-results search shows "Limpiar búsqueda" inline. Photo ‹ › arrows on swipe cards. Discount teaser shows ¡Casi! + projected savings. Grid scroll + filter state persists across /p/:id navigation (sessionStorage). Location updated to "Retiro en ~1h · Lun–Sáb 10–18h".
 
 ## Rules
 1. Read file before editing

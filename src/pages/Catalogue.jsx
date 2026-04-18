@@ -25,6 +25,12 @@ function getLiked()      { try { return JSON.parse(localStorage.getItem(STORAGE_
 function saveLiked(ids)  { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)) } catch {} }
 function getSavedMode()  { try { return localStorage.getItem(MODE_KEY) || null } catch { return null } }
 function saveMode(m)     { try { localStorage.setItem(MODE_KEY, m) } catch {} }
+function getDefaultMode(){ const s = getSavedMode(); return s || (window.innerWidth < 640 ? 'swipe' : 'grid') }
+
+const FILTER_KEY = 'vestilo-filters'
+const SCROLL_KEY = 'vestilo-scroll'
+function getSavedFilters()          { try { return JSON.parse(sessionStorage.getItem(FILTER_KEY) || '{}') } catch { return {} } }
+function saveFiltersToSession(obj)  { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify(obj)) } catch {} }
 
 async function recordInteraction(productId, type) {
   try { await supabase.rpc('record_swipe', { p_product_id: productId, p_type: type }) } catch {}
@@ -98,9 +104,13 @@ function ModePicker({ onPick }) {
 
 // ── Liked list ────────────────────────────────────────────────────────────────
 function LikedList({ likedProducts, onBack, onRemove }) {
-  const savings   = bulkSavings(likedProducts)
-  const hasDisc   = savings > 0
-  const needed    = Math.max(0, BULK_MIN + 1 - likedProducts.length)
+  const savings          = bulkSavings(likedProducts)
+  const hasDisc          = savings > 0
+  const needed           = Math.max(0, BULK_MIN + 1 - likedProducts.length)
+  const potentialSavings = likedProducts.reduce((sum, p) => {
+    const price = parseFloat(p.price) || 0
+    return sum + Math.min(BULK_DISC, Math.max(0, price - PRICE_FLOOR))
+  }, 0)
   const origTotal = likedProducts.reduce((s, p) => s + (parseFloat(p.price) || 0), 0)
   const discTotal = origTotal - savings
 
@@ -165,7 +175,7 @@ function LikedList({ likedProducts, onBack, onRemove }) {
               <div style={{ margin: '16px 0 8px', background: '#241810', border: '1px solid #3d3020', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 16 }}>🏷️</span>
                 <div style={{ fontSize: 12, color: '#c4b9a8', lineHeight: 1.5 }}>
-                  Te falt{needed === 1 ? 'a' : 'an'} <span style={{ color: '#f5e6c8', fontWeight: 700 }}>{needed} más</span> para el descuento de <span style={{ color: '#f5e6c8', fontWeight: 700 }}>Bs. 5 por camiseta</span>
+                  {needed === 1 ? <span style={{ color: '#f5c842', fontWeight: 700 }}>¡Casi! </span> : ''}<span style={{ color: '#f5e6c8', fontWeight: 700 }}>{needed} más</span> y bajamos Bs. 5 a cada una{potentialSavings > 0 ? <> → <span style={{ color: '#f5e6c8', fontWeight: 700 }}>ahorrarías Bs. {potentialSavings.toFixed(0)}</span></> : ''}
                 </div>
               </div>
             ) : null}
@@ -188,6 +198,12 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
   const navigate   = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
   const likedCount = likedIds.length
+
+  useEffect(() => {
+    const saved = parseInt(sessionStorage.getItem('vestilo-scroll') || '0', 10)
+    if (saved > 0) requestAnimationFrame(() => window.scrollTo(0, saved))
+    return () => { sessionStorage.setItem('vestilo-scroll', String(window.scrollY)) }
+  }, [])
 
   if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={onRemoveLiked} />
 
@@ -217,7 +233,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           const liked = likedIds.includes(p.id)
           return (
             <div key={p.id} className="product-card">
-              <div onClick={() => navigate(`/p/${p.id}`)} style={{ cursor: 'pointer' }}>
+              <div onClick={() => { sessionStorage.setItem('vestilo-scroll', String(window.scrollY)); navigate(`/p/${p.id}`) }} style={{ cursor: 'pointer' }}>
                 {photo
                   ? <img src={photo} alt={p.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
                   : <div style={{ aspectRatio: '3/4', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>👕</div>}
@@ -247,7 +263,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
           <span style={{ fontSize: 14 }}>📍</span>
           <span style={{ fontSize: 12, color: '#3d3020', fontWeight: 600 }}>Centro, calle Charcas · Santa Cruz</span>
         </div>
-        <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 8 }}>Retiro disponible · Coordinar por WhatsApp</div>
+        <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 8 }}>Retiro en ~1h · Lun–Sáb 10–18h · Coordinar por WhatsApp</div>
       </div>
     </div>
   )
@@ -255,7 +271,7 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Catalogue() {
-  const [mode, setMode]           = useState(getSavedMode)
+  const [mode, setMode]           = useState(getDefaultMode)
   const [products, setProducts]   = useState([])
   const [queue, setQueue]         = useState([])
   const [index, setIndex]         = useState(0)
@@ -263,8 +279,8 @@ export default function Catalogue() {
   const [likedIds, setLikedIds]   = useState(getLiked)
   const [showLiked, setShowLiked] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [filterSize, setFilterSize]   = useState('')
-  const [priceMax, setPriceMax]       = useState(1000)
+  const [filterSize, setFilterSize]   = useState(() => getSavedFilters().filterSize || '')
+  const [priceMax, setPriceMax]       = useState(() => getSavedFilters().priceMax ?? 1000)
   const [maxPrice, setMaxPrice]       = useState(1000)
   const [drag, setDrag]           = useState({ active: false, x: 0, startX: 0, startY: 0 })
   const [swipeDir, setSwipeDir]   = useState(null)
@@ -288,6 +304,7 @@ export default function Catalogue() {
   useEffect(() => { load() }, [])
   useEffect(() => { saveLiked(likedIds) }, [likedIds])
   useEffect(() => { setFlipped(false) }, [index])
+  useEffect(() => { saveFiltersToSession({ filterSize, priceMax }) }, [filterSize, priceMax])
 
   async function load() {
     setLoading(true)
@@ -344,8 +361,6 @@ export default function Catalogue() {
     </div>
   )
 
-  if (!mode) return <ModePicker onPick={pickMode} />
-
   const searchBar = (isDark) => (
     <div style={{ padding: '6px 12px 2px' }}>
       <form onSubmit={e => { e.preventDefault(); doSearch(searchQuery) }} style={{ display: 'flex', gap: 6 }}>
@@ -376,7 +391,9 @@ export default function Catalogue() {
       </form>
       {searchIds !== null && (
         <div style={{ fontSize: 11, color: '#9e8a6a', padding: '4px 4px 2px' }}>
-          {queue.length === 0 ? 'Sin resultados' : `${queue.length} resultado${queue.length !== 1 ? 's' : ''}`}
+          {queue.length === 0
+            ? <span>Sin resultados · <button type="button" onClick={clearSearch} style={{ background: 'none', border: 'none', color: '#9e8a6a', textDecoration: 'underline', cursor: 'pointer', fontSize: 11, padding: 0 }}>Limpiar búsqueda</button></span>
+            : `${queue.length} resultado${queue.length !== 1 ? 's' : ''}`}
         </div>
       )}
     </div>
@@ -496,7 +513,7 @@ export default function Catalogue() {
 
       {/* Location */}
       <div style={{ textAlign: 'center', padding: '2px 0 4px' }}>
-        <span style={{ fontSize: 10, color: '#5a4a35', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro disponible</span>
+        <span style={{ fontSize: 10, color: '#5a4a35', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro en ~1h · Lun–Sáb 10–18h</span>
       </div>
 
       {/* Promo */}
@@ -560,8 +577,12 @@ export default function Catalogue() {
                   )}
                   {photos.length > 1 && (
                     <>
-                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
-                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p + 1) % photos.length) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3 }} />
+                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
+                        {photoIdx > 0 && <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1 }}>‹</span>}
+                      </div>
+                      <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => (p + 1) % photos.length) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
+                        {photoIdx < photos.length - 1 && <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1 }}>›</span>}
+                      </div>
                     </>
                   )}
                   {likeOp > 0.1 && <div style={{ position: 'absolute', top: 32, left: 20, border: '3px solid #4CAF50', borderRadius: 6, padding: '4px 10px', opacity: likeOp, transform: 'rotate(-12deg)' }}><span style={{ color: '#4CAF50', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ME GUSTA</span></div>}
