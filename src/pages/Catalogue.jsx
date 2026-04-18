@@ -52,6 +52,8 @@ const BULK_DISC   = 5
 function genRef() {
   return Math.random().toString(36).slice(2, 5).toUpperCase()
 }
+
+const vibe = (ms) => { try { navigator.vibrate?.(ms) } catch {} }
 const PRICE_FLOOR = 20
 
 function bulkSavings(products) {
@@ -131,6 +133,7 @@ function LikedList({ likedProducts, onBack, onRemove }) {
   async function handleSendOrder() {
     if (!customerName.trim()) return
     setSubmitting(true)
+    vibe(20)
     const ref        = genRef()
     const productIds = likedProducts.map(p => p.id)
     const fullText   = `Hola! Me interesan estas prendas:\n\n${waText}\n\n¿Están disponibles?\n\nPedido: #${ref}`
@@ -403,6 +406,7 @@ export default function Catalogue() {
   }
   function switchMode() { pickMode(mode === 'swipe' ? 'grid' : 'swipe', 'switch') }
   function toggleLike(p) {
+    vibe(likedIds.includes(p.id) ? 8 : 15)
     setLikedIds(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])
     recordInteraction(p.id, likedIds.includes(p.id) ? 'skip' : 'like')
   }
@@ -516,12 +520,14 @@ export default function Catalogue() {
   function advance() { setIndex(i => i + 1); setPhotoIdx(0) }
   function doLike() {
     if (!current) return
+    vibe(15)
     recordInteraction(current.id, 'like')
     setLikedIds(prev => prev.includes(current.id) ? prev : [...prev, current.id])
     animate('right', advance)
   }
   function doSkip() {
     if (!current) return
+    vibe(8)
     recordInteraction(current.id, 'skip')
     animate('left', advance)
   }
