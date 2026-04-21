@@ -591,7 +591,6 @@ export default function Catalogue() {
   }
 
   const dx     = swipeDir === 'left' ? -420 : swipeDir === 'right' ? 420 : drag.x
-  const rot    = dx * 0.07
   const likeOp = Math.min(Math.max(dx / SWIPE_THRESHOLD, 0), 1)
   const skipOp = Math.min(Math.max(-dx / SWIPE_THRESHOLD, 0), 1)
 
@@ -675,7 +674,7 @@ export default function Catalogue() {
               ref={cardRef}
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={e => { e.preventDefault(); onEnd() }}
-              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
+              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
 
               {/* ── PHOTO SLIDES ── */}
               {photoIdx < photos.length ? (<>
