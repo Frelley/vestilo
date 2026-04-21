@@ -572,7 +572,7 @@ export default function Catalogue() {
   function onStart(e) {
     const x = e.touches ? e.touches[0].clientX : e.clientX
     const y = e.touches ? e.touches[0].clientY : e.clientY
-    setDrag({ active: true, x: 0, startX: x, startY: y })
+    setDrag({ active: true, x: 0, y: 0, startX: x, startY: y })
   }
   function onMove(e) {
     if (!dragRef.current.active) return
@@ -674,7 +674,7 @@ export default function Catalogue() {
             <div
               ref={cardRef}
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
-              onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd}
+              onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={e => { e.preventDefault(); onEnd() }}
               style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
 
               {/* ── PHOTO SLIDES ── */}
