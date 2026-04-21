@@ -222,3 +222,24 @@ button { cursor: pointer; }
   from { opacity: 0; transform: translateY(calc(-50% + 5px)); }
   to   { opacity: 1; transform: translateY(-50%); }
 }
+
+/* Fly-to-cart particle */
+@keyframes fly-to-cart {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  80%  { opacity: 0.9; }
+  100% { transform: translate(var(--fly-dx), var(--fly-dy)) scale(0.15); opacity: 0; }
+}
+
+/* Cart button glow ring */
+.cart-glow-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 9px;
+  border: 2px solid #4CAF50;
+  pointer-events: none;
+  animation: cart-ring-expand 0.5s ease-out forwards;
+}
+@keyframes cart-ring-expand {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.6); }
+}

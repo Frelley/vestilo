@@ -344,6 +344,22 @@ function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, l
   )
 }
 
+function FlyParticle({ src, fromX, fromY, toX, toY }) {
+  return (
+    <div style={{
+      position: 'fixed', left: fromX - 20, top: fromY - 20,
+      width: 40, height: 40, borderRadius: '50%', overflow: 'hidden',
+      border: '2px solid #4CAF50', pointerEvents: 'none', zIndex: 9999,
+      animation: 'fly-to-cart 0.65s ease-out forwards',
+      '--fly-dx': `${toX - fromX}px`, '--fly-dy': `${toY - fromY}px`,
+    }}>
+      {src
+        ? <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} draggable={false} />
+        : <div style={{ width: '100%', height: '100%', background: '#4CAF50' }} />}
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Catalogue() {
   const [mode, setMode]           = useState(getDefaultMode)
@@ -372,8 +388,12 @@ export default function Catalogue() {
     return () => clearInterval(t)
   }, [searchQuery])
 
-  const dragRef = useRef(drag)
-  dragRef.current = drag
+  const dragRef    = useRef(drag)
+  dragRef.current  = drag
+  const cartBtnRef = useRef(null)
+  const cardRef    = useRef(null)
+  const [particles,  setParticles]  = useState([])
+  const [glowCount,  setGlowCount]  = useState(0)
 
   useEffect(() => { load() }, [])
   useEffect(() => { saveLiked(likedIds) }, [likedIds])
@@ -527,6 +547,15 @@ export default function Catalogue() {
     vibe(15)
     recordInteraction(current.id, 'like')
     setLikedIds(prev => prev.includes(current.id) ? prev : [...prev, current.id])
+    if (cardRef.current && cartBtnRef.current) {
+      const from = cardRef.current.getBoundingClientRect()
+      const to   = cartBtnRef.current.getBoundingClientRect()
+      const id   = Date.now()
+      const src  = photos[photoIdx] || null
+      setParticles(p => [...p, { id, src, fromX: from.left + from.width / 2, fromY: from.top + from.height / 3, toX: to.left + to.width / 2, toY: to.top + to.height / 2 }])
+      setTimeout(() => setParticles(p => p.filter(x => x.id !== id)), 700)
+    }
+    setGlowCount(n => n + 1)
     animate('right', advance)
   }
   function doSkip() {
@@ -584,7 +613,8 @@ export default function Catalogue() {
             Filtros
           </button>
           <button onClick={switchMode} style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>Ver todo</button>
-          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button ref={cartBtnRef} onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            {glowCount > 0 && <span key={glowCount} className="cart-glow-ring" />}
             <CartHeart liked={likedProducts.length > 0} size={18} color="#9e8a6a" />
             {likedProducts.length > 0 && <span style={{ background: '#f5e6c8', color: '#1a1209', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedProducts.length}</span>}
           </button>
@@ -642,6 +672,7 @@ export default function Catalogue() {
             )}
             {/* Drag wrapper */}
             <div
+              ref={cardRef}
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd}
               style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px) rotate(${rot}deg)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
@@ -729,7 +760,8 @@ export default function Catalogue() {
       {current && (photoIdx < photos.length ? (
         <div style={{ position: 'fixed', bottom: 28, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
           <button onClick={doLike} className="action-btn"
-            style={{ width: 68, height: 68, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', boxShadow: '0 4px 22px rgba(76,175,80,0.32)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+            style={{ position: 'relative', width: 68, height: 68, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', boxShadow: '0 4px 22px rgba(76,175,80,0.32)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+            {glowCount > 0 && <span key={glowCount} className="cart-glow-ring" style={{ borderRadius: '50%' }} />}
             <CartHeart liked size={26} />
             <span style={{ fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', color: '#4CAF50' }}>me gusta</span>
           </button>
@@ -748,6 +780,7 @@ export default function Catalogue() {
         </div>
       )}
 
+      {particles.map(p => <FlyParticle key={p.id} {...p} />)}
     </div>
   )
 }
