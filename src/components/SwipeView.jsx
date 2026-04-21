@@ -32,9 +32,11 @@ export default function SwipeView({
   const dragY      = useRef(0)
   const cartBtnRef = useRef(null)
   const cardRef    = useRef(null)
+  const containerRef = useRef(null)
 
   const current  = queue[index]
-  const nextCard = queue[index + 1]
+  const prevCard = queue[index === 0 ? queue.length - 1 : index - 1]
+  const nextCard = queue[index >= queue.length - 1 ? 0 : index + 1]
   const photos   = getPhotos(current)
 
   function animate(dir, cb) {
@@ -42,10 +44,6 @@ export default function SwipeView({
     setTimeout(() => { setSwipeDir(null); setDrag({ active: false, x: 0, y: 0, startX: 0, startY: 0 }); cb() }, 320)
   }
   function advance() { setIndex(i => (i >= queue.length - 1 ? 0 : i + 1)); setPhotoIdx(0) }
-  function doAdvance() {
-    if (!current) return
-    animate('right', advance)
-  }
   function doLike() {
     if (!current) return
     vibe(15)
@@ -60,7 +58,7 @@ export default function SwipeView({
       setTimeout(() => setParticles(p => p.filter(x => x.id !== id)), 700)
     }
     setGlowCount(n => n + 1)
-    animate('right', advance)
+    animate('left', advance)
   }
   function doSkip() {
     if (!current) return
@@ -69,7 +67,7 @@ export default function SwipeView({
     animate('left', advance)
   }
   function goBack() {
-    animate('left', () => { setIndex(i => (i === 0 ? queue.length - 1 : i - 1)); setPhotoIdx(0) })
+    animate('right', () => { setIndex(i => (i === 0 ? queue.length - 1 : i - 1)); setPhotoIdx(0) })
   }
   function restart() { setIndex(0); setPhotoIdx(0) }
   function onStart(e) {
@@ -88,13 +86,15 @@ export default function SwipeView({
   function onEnd() {
     const { x } = dragRef.current
     const y = dragY.current
-    if      (x >  SWIPE_THRESHOLD) doAdvance()
-    else if (x < -SWIPE_THRESHOLD) goBack()
+    if      (x >  SWIPE_THRESHOLD) goBack()
+    else if (x < -SWIPE_THRESHOLD) animate('left', advance)
     else if (Math.abs(x) < 10 && Math.abs(y) < 10) setPhotoIdx(p => p >= photos.length ? 0 : p + 1)
     else setDrag(d => ({ ...d, active: false, x: 0, y: 0 }))
   }
 
-  const dx     = swipeDir === 'left' ? -520 : swipeDir === 'right' ? 520 : drag.x
+  const w      = containerRef.current?.offsetWidth ?? 420
+  const dx     = swipeDir === 'left' ? -w : swipeDir === 'right' ? w : drag.x
+  const transition = swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease'
   const likeOp = Math.min(Math.max(dx / SWIPE_THRESHOLD, 0), 1)
   const skipOp = Math.min(Math.max(-dx / SWIPE_THRESHOLD, 0), 1)
 
@@ -157,20 +157,29 @@ export default function SwipeView({
             </div>
           </div>
         ) : (
-          <div style={{ width: '100%', maxWidth: 380, position: 'relative', height: 520 }}>
-            {nextCard && (
-              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: 'scale(0.95) translateY(10px)', zIndex: 1 }}>
-                {getPhotos(nextCard)[0]
-                  ? <img src={getPhotos(nextCard)[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
-                  : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80, opacity: 0.3 }}>👕</div>}
+          <div ref={containerRef} style={{ width: '100%', maxWidth: 380, position: 'relative', height: 520, overflow: 'hidden' }}>
+            {/* Prev card — off-screen left, slides in when swiping right */}
+            {prevCard && (
+              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(calc(-100% + ${dx}px))`, transition, zIndex: 1 }}>
+                {getPhotos(prevCard)[0]
+                  ? <img src={getPhotos(prevCard)[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>👕</div>}
               </div>
             )}
-            {/* Drag wrapper */}
+            {/* Next card — off-screen right, slides in when swiping left */}
+            {nextCard && (
+              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(calc(100% + ${dx}px))`, transition, zIndex: 1 }}>
+                {getPhotos(nextCard)[0]
+                  ? <img src={getPhotos(nextCard)[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>👕</div>}
+              </div>
+            )}
+            {/* Current card */}
             <div
               ref={cardRef}
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={e => { e.preventDefault(); onEnd() }}
-              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px)`, transition: swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease', cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
+              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px)`, transition, cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
 
               {/* ── PHOTO SLIDES ── */}
               {photoIdx < photos.length ? (<>
