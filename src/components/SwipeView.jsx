@@ -180,10 +180,20 @@ export default function SwipeView({
                 </div>
 
                 {/* Nav zones */}
-                <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => p === 0 ? photos.length : p - 1) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
+                <div
+                  onMouseDown={e => e.stopPropagation()}
+                  onTouchStart={e => e.stopPropagation()}
+                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(p => p === 0 ? photos.length : p - 1) }}
+                  onClick={e => { e.stopPropagation(); setPhotoIdx(p => p === 0 ? photos.length : p - 1) }}
+                  style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
                   <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1 }}>‹</span>
                 </div>
-                <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => p >= photos.length ? 0 : p + 1) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
+                <div
+                  onMouseDown={e => e.stopPropagation()}
+                  onTouchStart={e => e.stopPropagation()}
+                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(p => p >= photos.length ? 0 : p + 1) }}
+                  onClick={e => { e.stopPropagation(); setPhotoIdx(p => p >= photos.length ? 0 : p + 1) }}
+                  style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
                   <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1 }}>›</span>
                 </div>
 
@@ -207,11 +217,21 @@ export default function SwipeView({
                 </div>
 
                 {/* Back nav zone */}
-                <div onClick={e => { e.stopPropagation(); setPhotoIdx(p => p === 0 ? photos.length : p - 1) }} style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
+                <div
+                  onMouseDown={e => e.stopPropagation()}
+                  onTouchStart={e => e.stopPropagation()}
+                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(p => p - 1) }}
+                  onClick={e => { e.stopPropagation(); setPhotoIdx(p => p - 1) }}
+                  style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
                   <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>‹</span>
                 </div>
                 {/* Forward nav zone — loops back to first photo */}
-                <div onClick={e => { e.stopPropagation(); setPhotoIdx(0) }} style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
+                <div
+                  onMouseDown={e => e.stopPropagation()}
+                  onTouchStart={e => e.stopPropagation()}
+                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(0) }}
+                  onClick={e => { e.stopPropagation(); setPhotoIdx(0) }}
+                  style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
                   <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>›</span>
                 </div>
 
