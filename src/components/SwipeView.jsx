@@ -124,7 +124,7 @@ export default function SwipeView({
 
       {/* Location */}
       <div style={{ textAlign: 'center', padding: '2px 0 4px' }}>
-        <span style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro en ~1h · Lun–Sáb 10–18h</span>
+        <span style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 0.5 }}>📍 Centro, calle Charcas · Retiro en ~1h · Lun–Sáb 10–18h · Envíos disponibles en Santa Cruz</span>
       </div>
 
       {/* Promo */}
