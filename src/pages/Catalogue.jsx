@@ -533,7 +533,7 @@ export default function Catalogue() {
   }
   function goBack() {
     if (index === 0) return
-    animate('right', () => { setIndex(i => i - 1); setPhotoIdx(0) })
+    animate('left', () => { setIndex(i => i - 1); setPhotoIdx(0) })
   }
   function restart() { setIndex(0); setPhotoIdx(0) }
   function onStart(e) {
