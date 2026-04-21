@@ -265,6 +265,9 @@ export default function SwipeView({
       )}
 
       {particles.map(p => <FlyParticle key={p.id} {...p} />)}
+
+      {/* Preload remaining photos of current shirt */}
+      {photos.map((src, i) => i !== photoIdx && <img key={src} src={src} style={{ display: 'none' }} alt="" />)}
     </div>
   )
 }
