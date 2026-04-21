@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v4.7 (next: v4.8) ✓
+## Version: v5.0 (next: v5.1) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -116,6 +116,9 @@ v3.9 UX: skip mode picker (auto-detect mobile→swipe, desktop→grid; preferenc
 v4.5 Haptic feedback: 15ms on like/heart, 8ms on skip, 20ms on order send. No-op on iOS.
 v4.4 Orders system: name modal before WA send creates order in DB, products auto-reserved. Admin "📋 Pedidos" tab: confirm sold (total price input, split per product) or liberar (back to Disponible). Run sql/orders.sql in Supabase first.
 v4.0 Swipe UX overhaul: description is now the last slide in the photo sequence (tap › to reach it, ‹ to go back — no more center-tap flip). Cart badge uses likedProducts.length (sold items no longer inflate count). Skip/like buttons get "pasar"/"me gusta" labels. Mode toggles are now text ("Ver todo"/"Swipe"). Counter and card area padding fixed to prevent clipping on short screens.
+v4.8 Catalogue.jsx refactored into multiple files (785 → 185 lines orchestrator). Extracted: SwipeView, GridView, LikedList, PromoBanner, FlyParticle, ModePicker, WhatsappIcon components; catalogueHelpers.js for storage wrappers, getPhotos, bulkSavings, vibe, genRef, recordInteraction, shared constants. Behavior preserved exactly (swipe index still persists across mode switches).
+v4.9 FilterPanel component: dedupes light (grid) and dark (swipe) filter UI into one component with a `dark` prop.
+v5.0 Bulk discount threshold lowered from 7 to 3 shirts (BULK_MIN 6→2). PromoBanner updated to "3 o más".
 
 ## Rules
 1. Read file before editing
