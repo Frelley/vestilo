@@ -29,6 +29,7 @@ export default function SwipeView({
 
   const dragRef    = useRef(drag)
   dragRef.current  = drag
+  const dragY      = useRef(0)
   const cartBtnRef = useRef(null)
   const cardRef    = useRef(null)
 
@@ -74,17 +75,22 @@ export default function SwipeView({
   function onStart(e) {
     const x = e.touches ? e.touches[0].clientX : e.clientX
     const y = e.touches ? e.touches[0].clientY : e.clientY
+    dragY.current = 0
     setDrag({ active: true, x: 0, y: 0, startX: x, startY: y })
   }
   function onMove(e) {
     if (!dragRef.current.active) return
     const x = e.touches ? e.touches[0].clientX : e.clientX
+    const y = e.touches ? e.touches[0].clientY : e.clientY
+    dragY.current = y - dragRef.current.startY
     setDrag(d => ({ ...d, x: x - d.startX }))
   }
   function onEnd() {
     const { x } = dragRef.current
+    const y = dragY.current
     if      (x >  SWIPE_THRESHOLD) doAdvance()
     else if (x < -SWIPE_THRESHOLD) goBack()
+    else if (Math.abs(x) < 10 && Math.abs(y) < 10) setPhotoIdx(p => p >= photos.length ? 0 : p + 1)
     else setDrag(d => ({ ...d, active: false, x: 0, y: 0 }))
   }
 
@@ -179,23 +185,6 @@ export default function SwipeView({
                   ))}
                 </div>
 
-                {/* Nav zones */}
-                <div
-                  onMouseDown={e => e.stopPropagation()}
-                  onTouchStart={e => e.stopPropagation()}
-                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(p => p === 0 ? photos.length : p - 1) }}
-                  onClick={e => { e.stopPropagation(); setPhotoIdx(p => p === 0 ? photos.length : p - 1) }}
-                  style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
-                  <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1 }}>‹</span>
-                </div>
-                <div
-                  onMouseDown={e => e.stopPropagation()}
-                  onTouchStart={e => e.stopPropagation()}
-                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(p => p >= photos.length ? 0 : p + 1) }}
-                  onClick={e => { e.stopPropagation(); setPhotoIdx(p => p >= photos.length ? 0 : p + 1) }}
-                  style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
-                  <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1 }}>›</span>
-                </div>
 
 
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', padding: '40px 16px 16px', pointerEvents: 'none' }}>
@@ -216,24 +205,6 @@ export default function SwipeView({
                   ))}
                 </div>
 
-                {/* Back nav zone */}
-                <div
-                  onMouseDown={e => e.stopPropagation()}
-                  onTouchStart={e => e.stopPropagation()}
-                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(p => p - 1) }}
-                  onClick={e => { e.stopPropagation(); setPhotoIdx(p => p - 1) }}
-                  style={{ position: 'absolute', left: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', paddingLeft: 8 }}>
-                  <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>‹</span>
-                </div>
-                {/* Forward nav zone — loops back to first photo */}
-                <div
-                  onMouseDown={e => e.stopPropagation()}
-                  onTouchStart={e => e.stopPropagation()}
-                  onTouchEnd={e => { e.stopPropagation(); setPhotoIdx(0) }}
-                  onClick={e => { e.stopPropagation(); setPhotoIdx(0) }}
-                  style={{ position: 'absolute', right: 0, top: 0, width: '30%', height: '80%', zIndex: 3, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
-                  <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.35)', lineHeight: 1 }}>›</span>
-                </div>
 
                 <div style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, marginTop: 20 }}>Descripción</div>
                 <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
