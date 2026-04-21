@@ -357,7 +357,7 @@ export default function Catalogue() {
   const [filterSize, setFilterSize]   = useState(() => getSavedFilters().filterSize || '')
   const [priceMax, setPriceMax]       = useState(() => getSavedFilters().priceMax ?? 1000)
   const [maxPrice, setMaxPrice]       = useState(1000)
-  const [drag, setDrag]           = useState({ active: false, x: 0, startX: 0, startY: 0 })
+  const [drag, setDrag]           = useState({ active: false, x: 0, y: 0, startX: 0, startY: 0 })
   const [swipeDir, setSwipeDir]   = useState(null)
   const [photoIdx, setPhotoIdx]   = useState(0)
   const [searchQuery, setSearchQuery]     = useState('')
@@ -515,7 +515,7 @@ export default function Catalogue() {
 
   function animate(dir, cb) {
     setSwipeDir(dir)
-    setTimeout(() => { setSwipeDir(null); setDrag({ active: false, x: 0, startX: 0, startY: 0 }); cb() }, 320)
+    setTimeout(() => { setSwipeDir(null); setDrag({ active: false, x: 0, y: 0, startX: 0, startY: 0 }); cb() }, 320)
   }
   function advance() { setIndex(i => i + 1); setPhotoIdx(0) }
   function doLike() {
@@ -531,6 +531,10 @@ export default function Catalogue() {
     recordInteraction(current.id, 'skip')
     animate('left', advance)
   }
+  function goBack() {
+    if (index === 0) return
+    animate('right', () => { setIndex(i => i - 1); setPhotoIdx(0) })
+  }
   function restart() { setIndex(0); setPhotoIdx(0) }
   function onStart(e) {
     const x = e.touches ? e.touches[0].clientX : e.clientX
@@ -540,13 +544,17 @@ export default function Catalogue() {
   function onMove(e) {
     if (!dragRef.current.active) return
     const x = e.touches ? e.touches[0].clientX : e.clientX
-    setDrag(d => ({ ...d, x: x - d.startX }))
+    const y = e.touches ? e.touches[0].clientY : e.clientY
+    setDrag(d => ({ ...d, x: x - d.startX, y: y - d.startY }))
   }
   function onEnd() {
-    const { x } = dragRef.current
-    if (x > SWIPE_THRESHOLD) doLike()
-    else if (x < -SWIPE_THRESHOLD) doSkip()
-    else setDrag(d => ({ ...d, active: false, x: 0 }))
+    const { x, y } = dragRef.current
+    const ax = Math.abs(x), ay = Math.abs(y)
+    const forward  = (ax >= ay && x >  SWIPE_THRESHOLD) || (ay > ax && y < -SWIPE_THRESHOLD)
+    const backward = (ax >= ay && x < -SWIPE_THRESHOLD) || (ay > ax && y >  SWIPE_THRESHOLD)
+    if (forward) doLike()
+    else if (backward) goBack()
+    else setDrag(d => ({ ...d, active: false, x: 0, y: 0 }))
   }
 
   const dx     = swipeDir === 'left' ? -420 : swipeDir === 'right' ? 420 : drag.x
@@ -656,18 +664,12 @@ export default function Catalogue() {
                 </div>
 
                 {likeOp > 0.1 && <div style={{ position: 'absolute', top: 32, left: 20, border: '3px solid #4CAF50', borderRadius: 6, padding: '4px 10px', opacity: likeOp, transform: 'rotate(-12deg)' }}><span style={{ color: '#4CAF50', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ME GUSTA</span></div>}
-                {skipOp > 0.1 && <div style={{ position: 'absolute', top: 32, right: 20, border: '3px solid #ef5350', borderRadius: 6, padding: '4px 10px', opacity: skipOp, transform: 'rotate(12deg)' }}><span style={{ color: '#ef5350', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>PASAR</span></div>}
+                {skipOp > 0.1 && <div style={{ position: 'absolute', top: 32, right: 20, border: '3px solid #ef5350', borderRadius: 6, padding: '4px 10px', opacity: skipOp, transform: 'rotate(12deg)' }}><span style={{ color: '#ef5350', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ATRÁS</span></div>}
 
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', padding: '40px 16px 16px', pointerEvents: 'none' }}>
                   <div style={{ fontFamily: "'Playfair Display', serif", color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Talla {current.size}</span>
-                    {currentColors.map(c => <span key={c} style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>)}
-                    {currentColors.map(c => (
-                      <span key={c} style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', display: 'inline-block' }} />{c}
-                      </span>
-                    ))}
                     <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
                     <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#f5e6c8' }}>Bs. {current.price}</span>
                   </div>
@@ -723,12 +725,7 @@ export default function Catalogue() {
 
       {/* Action buttons — full size centred on photo slides, small side pills on description slide */}
       {current && (photoIdx < photos.length ? (
-        <div style={{ position: 'fixed', bottom: 28, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20, alignItems: 'center', zIndex: 10 }}>
-          <button onClick={doSkip} className="action-btn"
-            style={{ width: 60, height: 60, background: '#241810', border: '2px solid #ef5350', color: '#ef5350', boxShadow: '0 4px 18px rgba(239,83,80,0.28)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-            <span style={{ fontSize: 20 }}>✕</span>
-            <span style={{ fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', color: '#ef5350' }}>pasar</span>
-          </button>
+        <div style={{ position: 'fixed', bottom: 28, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
           <button onClick={doLike} className="action-btn"
             style={{ width: 68, height: 68, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', boxShadow: '0 4px 22px rgba(76,175,80,0.32)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
             <CartHeart liked size={26} />
@@ -737,8 +734,6 @@ export default function Catalogue() {
         </div>
       ) : (
         <>
-          <button onClick={doSkip} className="action-btn"
-            style={{ position: 'fixed', left: 12, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: '#241810', border: '2px solid #ef5350', color: '#ef5350', boxShadow: '0 2px 12px rgba(239,83,80,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, fontSize: 16 }}>✕</button>
           <button onClick={doLike} className="action-btn"
             style={{ position: 'fixed', right: 12, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: '#241810', border: '2px solid #4CAF50', color: '#4CAF50', boxShadow: '0 2px 12px rgba(76,175,80,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
             <CartHeart liked size={20} />
