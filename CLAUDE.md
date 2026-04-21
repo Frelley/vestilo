@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v5.0 (next: v5.1) ✓
+## Version: v5.1 (next: v5.2) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -119,6 +119,7 @@ v4.0 Swipe UX overhaul: description is now the last slide in the photo sequence 
 v4.8 Catalogue.jsx refactored into multiple files (785 → 185 lines orchestrator). Extracted: SwipeView, GridView, LikedList, PromoBanner, FlyParticle, ModePicker, WhatsappIcon components; catalogueHelpers.js for storage wrappers, getPhotos, bulkSavings, vibe, genRef, recordInteraction, shared constants. Behavior preserved exactly (swipe index still persists across mode switches).
 v4.9 FilterPanel component: dedupes light (grid) and dark (swipe) filter UI into one component with a `dark` prop.
 v5.0 Bulk discount threshold lowered from 7 to 3 shirts (BULK_MIN 6→2). PromoBanner updated to "3 o más".
+v5.1 Swipe queue shuffled randomly each session (Fisher-Yates in Catalogue.jsx). Swipe loop-around: swiping past last item wraps to first, swiping before first wraps to last.
 
 ## Rules
 1. Read file before editing

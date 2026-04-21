@@ -40,7 +40,7 @@ export default function SwipeView({
     setSwipeDir(dir)
     setTimeout(() => { setSwipeDir(null); setDrag({ active: false, x: 0, y: 0, startX: 0, startY: 0 }); cb() }, 320)
   }
-  function advance() { setIndex(i => i + 1); setPhotoIdx(0) }
+  function advance() { setIndex(i => (i >= queue.length - 1 ? 0 : i + 1)); setPhotoIdx(0) }
   function doAdvance() {
     if (!current) return
     animate('right', advance)
@@ -68,8 +68,7 @@ export default function SwipeView({
     animate('left', advance)
   }
   function goBack() {
-    if (index === 0) return
-    animate('left', () => { setIndex(i => i - 1); setPhotoIdx(0) })
+    animate('left', () => { setIndex(i => (i === 0 ? queue.length - 1 : i - 1)); setPhotoIdx(0) })
   }
   function restart() { setIndex(0); setPhotoIdx(0) }
   function onStart(e) {

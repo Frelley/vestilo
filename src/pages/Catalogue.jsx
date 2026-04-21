@@ -56,7 +56,12 @@ export default function Catalogue() {
       if (p.price > priceMax) return false
       return true
     })
-    setQueue(filtered); setIndex(0); setPhotoIdx(0)
+    const arr = [...filtered]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    setQueue(arr); setIndex(0); setPhotoIdx(0)
   }, [filterSize, priceMax, products, searchIds])
 
   function pickMode(m, action = 'pick') {
