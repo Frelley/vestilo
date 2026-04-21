@@ -518,6 +518,10 @@ export default function Catalogue() {
     setTimeout(() => { setSwipeDir(null); setDrag({ active: false, x: 0, y: 0, startX: 0, startY: 0 }); cb() }, 320)
   }
   function advance() { setIndex(i => i + 1); setPhotoIdx(0) }
+  function doAdvance() {
+    if (!current) return
+    animate('right', advance)
+  }
   function doLike() {
     if (!current) return
     vibe(15)
@@ -552,7 +556,7 @@ export default function Catalogue() {
     const ax = Math.abs(x), ay = Math.abs(y)
     const forward  = (ax >= ay && x >  SWIPE_THRESHOLD) || (ay > ax && y < -SWIPE_THRESHOLD)
     const backward = (ax >= ay && x < -SWIPE_THRESHOLD) || (ay > ax && y >  SWIPE_THRESHOLD)
-    if (forward) doLike()
+    if (forward) doAdvance()
     else if (backward) goBack()
     else setDrag(d => ({ ...d, active: false, x: 0, y: 0 }))
   }
@@ -663,8 +667,6 @@ export default function Catalogue() {
                   <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.6)', textShadow: '0 1px 4px rgba(0,0,0,0.6)', lineHeight: 1 }}>›</span>
                 </div>
 
-                {likeOp > 0.1 && <div style={{ position: 'absolute', top: 32, left: 20, border: '3px solid #4CAF50', borderRadius: 6, padding: '4px 10px', opacity: likeOp, transform: 'rotate(-12deg)' }}><span style={{ color: '#4CAF50', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ME GUSTA</span></div>}
-                {skipOp > 0.1 && <div style={{ position: 'absolute', top: 32, right: 20, border: '3px solid #ef5350', borderRadius: 6, padding: '4px 10px', opacity: skipOp, transform: 'rotate(12deg)' }}><span style={{ color: '#ef5350', fontWeight: 800, fontSize: 22, fontFamily: "'Playfair Display', serif", letterSpacing: 2 }}>ATRÁS</span></div>}
 
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', padding: '40px 16px 16px', pointerEvents: 'none' }}>
                   <div style={{ fontFamily: "'Playfair Display', serif", color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{current.name}</div>
