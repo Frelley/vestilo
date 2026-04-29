@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v5.6 (next: v5.7) ✓
+## Version: v5.7 (next: v5.8) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -121,6 +121,7 @@ v4.9 FilterPanel component: dedupes light (grid) and dark (swipe) filter UI into
 v5.0 Bulk discount threshold lowered from 7 to 3 shirts (BULK_MIN 6→2). PromoBanner updated to "3 o más".
 v5.1 Swipe queue shuffled randomly each session (Fisher-Yates in Catalogue.jsx). Swipe loop-around: swiping past last item wraps to first, swiping before first wraps to last.
 v5.6 Carousel swipe: prev/next shirts slide in from left/right as you drag (standard 3-card carousel). Swipe left = advance, swipe right = go back. Like button exits left (advances forward).
+v5.7 Meta Commerce Manager product feed: api/meta-feed.js — GET /api/meta-feed returns CSV of all Disponible products in Meta's feed format (id, title, description, availability, condition, price, link, image_link, brand, google_product_category, size, color). Register URL in Commerce Manager for hourly WhatsApp catalogue sync.
 
 ## Rules
 1. Read file before editing
