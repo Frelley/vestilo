@@ -1,4 +1,4 @@
-export const WA_NUMBER = import.meta.env.VITE_WA_NUMBER || '59170000000'
+export const WA_NUMBER = import.meta.env.VITE_WA_NUMBER || '59171366861'
 
 export const SIZES   = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 export const COLORS  = ['Negro', 'Blanco', 'Gris', 'Azul', 'Azul marino', 'Rojo', 'Vino', 'Verde', 'Café', 'Beige', 'Amarillo', 'Rosa', 'Morado', 'Naranja', 'Multicolor']
