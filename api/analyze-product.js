@@ -43,16 +43,12 @@ export default async function handler(req, res) {
             })),
             {
               type: 'text',
-              text: `Analiza estas fotos de una prenda de ropa para una tienda de ropa de segunda mano en Santa Cruz de la Sierra, Bolivia. Pueden incluir frente, espalda, etiqueta u otros ángulos.
-
-Escribe la descripción con energía camba de Santa Cruz — espontánea, con humor, como vendiendo por WhatsApp. El slang debe salir natural, no forzado. Varía el tono según la prenda: si es para mujer, habla a ella; si es para hombre, habla a él; si es unisex, habla a cualquiera. No asumas género del comprador si la prenda no lo define. A veces un chiste sobre la ocasión, a veces entusiasmo genuino — que cada descripción suene diferente. Si detectas la marca en la etiqueta, mencionala. NO menciones desgaste, uso, manchas ni defectos. Solo lo positivo.
+              text: `Analiza estas fotos de una prenda de ropa. Pueden incluir frente, espalda, etiqueta u otros ángulos.
 
 Responde SOLO con JSON válido, sin texto adicional:
 {
-  "description": "descripción atractiva en español con tono camba de 2-3 oraciones, mencionando la marca si se detecta",
   "brand": "nombre de la marca si es visible en etiqueta, o null",
   "colors": ["colores de esta lista exacta: negro, blanco, gris, azul, azul-marino, rojo, verde, amarillo, cafe, naranja, rosa, morado, multicolor, beige, crema"],
-  "aesthetic": ["2-4 etiquetas de estética de esta lista: vintage, streetwear, y2k, boho, minimalista, cottagecore, coquette, preppy, sporty, elegante, casual, retro, grunge, punk, rock, hipster, urbano, formal, semi-formal"],
   "gender": "mujer, hombre, o unisex",
   "tags": ["8-15 tags de la lista canónica que describe la prenda — incluir tipo de prenda: camiseta, camisa, hoodie, buzo, musculosa, top, etc."]
 }
@@ -86,7 +82,6 @@ ${CANONICAL_TAGS.join(', ')}`,
     // Merge all fields and normalize to canonical vocabulary
     const rawTags = [
       ...(parsed.tags || []),
-      ...(parsed.aesthetic || []),
       ...(parsed.colors || []),
       parsed.gender || null,
       parsed.brand || null,
@@ -95,18 +90,18 @@ ${CANONICAL_TAGS.join(', ')}`,
     const allTags = toCanonicalTags(rawTags)
 
     const updateData = { ai_tags: allTags }
-    if (parsed.description) {
-      if (force) {
-        updateData.notes = parsed.description
-      } else {
-        // Only fill notes if currently empty
-        const checkRes = await fetch(`${supabaseUrl}/rest/v1/products?id=eq.${product_id}&select=notes`, {
-          headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
-        })
-        const [product] = await checkRes.json()
-        if (!product?.notes?.trim()) updateData.notes = parsed.description
-      }
-    }
+    // if (parsed.description) {
+    //   if (force) {
+    //     updateData.notes = parsed.description
+    //   } else {
+    //     // Only fill notes if currently empty
+    //     const checkRes = await fetch(`${supabaseUrl}/rest/v1/products?id=eq.${product_id}&select=notes`, {
+    //       headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+    //     })
+    //     const [product] = await checkRes.json()
+    //     if (!product?.notes?.trim()) updateData.notes = parsed.description
+    //   }
+    // }
 
     await fetch(`${supabaseUrl}/rest/v1/products?id=eq.${product_id}`, {
       method: 'PATCH',
