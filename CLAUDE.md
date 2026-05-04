@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v5.9 (next: v6.0) ✓
+## Version: v6.0 (next: v6.1) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -36,9 +36,11 @@ src/
                         Product URL included.
                         Exports: useShareModal() + <ShareModal>
     PosterModal.jsx   — Admin social media poster generator.
-                        Renders 1080x1080 canvas: product photo + dark gradient overlay,
-                        notes as description text, price, size tag, brand name,
-                        URL text, QR code bottom-right.
+                        Renders 1080x1080 canvas: product photo + color-tinted gradient
+                        overlay (15 color themes), vibe label badge (Claude Haiku),
+                        description text, CTA urgency text, price (80px white+shadow),
+                        pill-shaped size tag, QR code bottom-right. No URL text.
+                        Calls /api/generate-poster-text before drawing for vibe+CTA.
                         3 actions: copy image, download PNG, copy caption.
                         Exports: usePosterModal() + <PosterModal>
   pages/
@@ -121,6 +123,7 @@ v4.9 FilterPanel component: dedupes light (grid) and dark (swipe) filter UI into
 v5.0 Bulk discount threshold lowered from 7 to 3 shirts (BULK_MIN 6→2). PromoBanner updated to "3 o más".
 v5.1 Swipe queue shuffled randomly each session (Fisher-Yates in Catalogue.jsx). Swipe loop-around: swiping past last item wraps to first, swiping before first wraps to last.
 v5.6 Carousel swipe: prev/next shirts slide in from left/right as you drag (standard 3-card carousel). Swipe left = advance, swipe right = go back. Like button exits left (advances forward).
+v6.0 Poster redesign: brand header 28→44px, color-tinted background per shirt color (15 color themes), vibe label badge (Claude Haiku via /api/generate-poster-text), CTA urgency text, pill-shaped size tag with border, price #fff + shadow (80px), URL text removed (QR sufficient). New api/generate-poster-text.js.
 v5.7 Meta Commerce Manager product feed: api/meta-feed.js — GET /api/meta-feed returns CSV of all Disponible products in Meta's feed format (id, title, description, availability, condition, price, link, image_link, brand, google_product_category, size, color). Register URL in Commerce Manager for hourly WhatsApp catalogue sync.
 
 ## Rules

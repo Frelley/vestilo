@@ -2,6 +2,35 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 
 const STORE_URL = 'https://vestilo.vercel.app'
 
+const COLOR_BG = {
+  'Azul':        '#070f1a',
+  'Azul marino': '#05090f',
+  'Celeste':     '#071218',
+  'Rojo':        '#160707',
+  'Vino':        '#120412',
+  'Rosa':        '#150810',
+  'Verde':       '#071207',
+  'Naranja':     '#160c04',
+  'Amarillo':    '#131002',
+  'Morado':      '#0e0614',
+  'Gris':        '#0c0c0e',
+  'Negro':       '#080808',
+  'Blanco':      '#1a1209',
+  'Beige':       '#1a1407',
+}
+
+function getBgColor(color) {
+  return COLOR_BG[color] || '#1a1209'
+}
+
+function hexToRgb(hex) {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ]
+}
+
 export function usePosterModal() {
   const [posterProduct, setPosterProduct] = useState(null)
   const open  = useCallback(p => setPosterProduct(p), [])
@@ -30,7 +59,25 @@ function loadScript(src) {
   })
 }
 
-async function drawPoster(canvas, product) {
+async function fetchPosterText(product) {
+  try {
+    const res = await fetch('/api/generate-poster-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cat: product.cat,
+        color: product.color,
+        size: product.size,
+        ai_tags: product.ai_tags,
+        notes: product.notes,
+      }),
+    })
+    if (res.ok) return await res.json()
+  } catch {}
+  return { vibe: null, cta: null }
+}
+
+async function drawPoster(canvas, product, posterText = {}) {
   const SIZE = 1080
   canvas.width  = SIZE
   canvas.height = SIZE
@@ -39,7 +86,8 @@ async function drawPoster(canvas, product) {
   const url = `${STORE_URL}/p/${product.id}`
   const photos = product.photos?.length ? product.photos : product.photo_url ? [product.photo_url] : []
 
-  ctx.fillStyle = '#1a1209'
+  const bgColor = getBgColor(product.color)
+  ctx.fillStyle = bgColor
   ctx.fillRect(0, 0, SIZE, SIZE)
 
   if (photos[0]) {
@@ -54,22 +102,33 @@ async function drawPoster(canvas, product) {
     } catch {}
   }
 
-  const grad = ctx.createLinearGradient(0, SIZE * 0.35, 0, SIZE)
-  grad.addColorStop(0, 'rgba(10,6,2,0)')
-  grad.addColorStop(0.4, 'rgba(10,6,2,0.75)')
-  grad.addColorStop(1,   'rgba(10,6,2,0.97)')
+  const [r, g, b] = hexToRgb(bgColor)
+  const grad = ctx.createLinearGradient(0, SIZE * 0.3, 0, SIZE)
+  grad.addColorStop(0,    `rgba(${r},${g},${b},0)`)
+  grad.addColorStop(0.35, `rgba(${r},${g},${b},0.72)`)
+  grad.addColorStop(1,    `rgba(${r},${g},${b},0.97)`)
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, SIZE, SIZE)
 
-  ctx.fillStyle = 'rgba(245,230,200,0.85)'
-  ctx.font = 'bold 28px Georgia, serif'
+  // Brand — bigger, stronger
+  ctx.fillStyle = 'rgba(245,230,200,0.95)'
+  ctx.font = 'bold 44px Georgia, serif'
   ctx.textAlign = 'left'
-  ctx.fillText('VESTILO A TU SONSO!', 52, 64)
-  ctx.fillStyle = 'rgba(158,138,106,0.8)'
+  ctx.fillText('VESTILO A TU SONSO!', 52, 72)
+  ctx.strokeStyle = 'rgba(245,230,200,0.22)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(52, 84)
+  ctx.lineTo(420, 84)
+  ctx.stroke()
+  ctx.fillStyle = 'rgba(158,138,106,0.85)'
   ctx.font = '18px Arial, sans-serif'
-  ctx.fillText('SANTA CRUZ · BOLIVIA', 52, 92)
+  ctx.fillText('SANTA CRUZ · BOLIVIA', 52, 108)
 
+  // Description + vibe label
   const desc = (product.notes || '').trim()
+  let descStartY = SIZE - 290
+
   if (desc) {
     ctx.fillStyle = '#f5e6c8'
     ctx.font = '500 38px Georgia, serif'
@@ -84,29 +143,80 @@ async function drawPoster(canvas, product) {
     }
     if (line) lines.push(line)
     const lineH = 50
-    const startY = SIZE - 260 - (lines.length - 1) * lineH
-    lines.forEach((l, i) => ctx.fillText(l, 52, startY + i * lineH))
+    descStartY = SIZE - 290 - (lines.length - 1) * lineH
+
+    // Vibe pill above description
+    if (posterText.vibe) {
+      ctx.font = 'bold 18px Arial, sans-serif'
+      const vibeText = posterText.vibe.toUpperCase()
+      const vibeW = ctx.measureText(vibeText).width + 28
+      const vibeTop = descStartY - 52
+      ctx.fillStyle = 'rgba(245,230,200,0.15)'
+      ctx.strokeStyle = 'rgba(245,230,200,0.5)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.roundRect(52, vibeTop, vibeW, 32, 6)
+      ctx.fill()
+      ctx.stroke()
+      ctx.fillStyle = '#f5e6c8'
+      ctx.fillText(vibeText, 66, vibeTop + 22)
+    }
+
+    ctx.fillStyle = '#f5e6c8'
+    ctx.font = '500 38px Georgia, serif'
+    ctx.textAlign = 'left'
+    lines.forEach((l, i) => ctx.fillText(l, 52, descStartY + i * lineH))
+  } else if (posterText.vibe) {
+    // No description — vibe pill still shows above price area
+    ctx.font = 'bold 18px Arial, sans-serif'
+    const vibeText = posterText.vibe.toUpperCase()
+    const vibeW = ctx.measureText(vibeText).width + 28
+    const vibeTop = SIZE - 320
+    ctx.fillStyle = 'rgba(245,230,200,0.15)'
+    ctx.strokeStyle = 'rgba(245,230,200,0.5)'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.roundRect(52, vibeTop, vibeW, 32, 6)
+    ctx.fill()
+    ctx.stroke()
+    ctx.fillStyle = '#f5e6c8'
+    ctx.fillText(vibeText, 66, vibeTop + 22)
   }
 
-  ctx.fillStyle = '#f5e6c8'
-  ctx.font = 'bold 72px Georgia, serif'
+  // Price — brighter, bigger
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'
+  ctx.shadowBlur = 14
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 80px Georgia, serif'
   ctx.textAlign = 'left'
-  ctx.fillText(`Bs. ${product.price}`, 52, SIZE - 160)
+  ctx.fillText(`Bs. ${product.price}`, 52, SIZE - 148)
+  ctx.shadowBlur = 0
 
+  // Size pill — pill shape, cleaner border
+  ctx.font = '600 22px Arial, sans-serif'
+  const sizeText = `Talla ${product.size}`
+  const pillW = ctx.measureText(sizeText).width + 36
+  const pillTop = SIZE - 124
   ctx.fillStyle = 'rgba(245,230,200,0.15)'
+  ctx.strokeStyle = 'rgba(245,230,200,0.65)'
+  ctx.lineWidth = 1.5
   ctx.beginPath()
-  ctx.roundRect(52, SIZE - 138, 110, 44, 8)
+  ctx.roundRect(52, pillTop, pillW, 40, 20)
   ctx.fill()
+  ctx.stroke()
   ctx.fillStyle = '#f5e6c8'
-  ctx.font = '500 22px Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText(`Talla ${product.size}`, 107, SIZE - 108)
+  ctx.fillText(sizeText, 52 + pillW / 2, pillTop + 27)
 
-  ctx.fillStyle = 'rgba(158,138,106,0.9)'
-  ctx.font = '20px Arial, sans-serif'
-  ctx.textAlign = 'left'
-  ctx.fillText(url, 52, SIZE - 52)
+  // CTA text
+  if (posterText.cta) {
+    ctx.fillStyle = 'rgba(245,230,200,0.72)'
+    ctx.font = 'italic 22px Georgia, serif'
+    ctx.textAlign = 'left'
+    ctx.fillText(posterText.cta, 52, SIZE - 58)
+  }
 
+  // QR code
   try {
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js')
     const qrSize = 160
@@ -115,13 +225,13 @@ async function drawPoster(canvas, product) {
     container.style.position = 'fixed'
     container.style.left = '-9999px'
     document.body.appendChild(container)
-    new QRCode(container, { text: url, width: qrSize, height: qrSize, colorDark: '#f5e6c8', colorLight: '#1a1209' })
+    new QRCode(container, { text: url, width: qrSize, height: qrSize, colorDark: '#f5e6c8', colorLight: bgColor })
     await new Promise(r => setTimeout(r, 200))
     const qrCanvas = container.querySelector('canvas')
     if (qrCanvas) {
       const qrX = SIZE - qrSize - qrPad
       const qrY = SIZE - qrSize - qrPad
-      ctx.fillStyle = 'rgba(26,18,9,0.7)'
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'
       ctx.beginPath()
       ctx.roundRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 12)
       ctx.fill()
@@ -140,7 +250,12 @@ export function PosterModal({ product, onClose }) {
   useEffect(() => {
     if (!product || !canvasRef.current) return
     setReady(false)
-    drawPoster(canvasRef.current, product).then(() => setReady(true))
+    async function run() {
+      const posterText = await fetchPosterText(product)
+      await drawPoster(canvasRef.current, product, posterText)
+      setReady(true)
+    }
+    run()
   }, [product])
 
   if (!product) return null
