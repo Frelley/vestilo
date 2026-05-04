@@ -43,7 +43,8 @@ Responde SOLO con JSON válido, sin texto extra:
     if (!claudeRes.ok) throw new Error('Claude API error')
 
     const data = await claudeRes.json()
-    const text = data.content?.[0]?.text?.trim() || '{}'
+    const raw = data.content?.[0]?.text?.trim() || '{}'
+    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
     const result = JSON.parse(text)
 
     res.json({ vibe: result.vibe || null, cta: result.cta || null })
