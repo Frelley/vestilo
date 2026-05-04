@@ -103,10 +103,11 @@ async function drawPoster(canvas, product, posterText = {}) {
   }
 
   const [r, g, b] = hexToRgb(bgColor)
-  const grad = ctx.createLinearGradient(0, SIZE * 0.3, 0, SIZE)
+  const grad = ctx.createLinearGradient(0, SIZE * 0.55, 0, SIZE)
   grad.addColorStop(0,    `rgba(${r},${g},${b},0)`)
-  grad.addColorStop(0.35, `rgba(${r},${g},${b},0.72)`)
-  grad.addColorStop(1,    `rgba(${r},${g},${b},0.97)`)
+  grad.addColorStop(0.28, `rgba(${r},${g},${b},0.55)`)
+  grad.addColorStop(0.55, `rgba(${r},${g},${b},0.85)`)
+  grad.addColorStop(1,    `rgba(${r},${g},${b},0.96)`)
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, SIZE, SIZE)
 
