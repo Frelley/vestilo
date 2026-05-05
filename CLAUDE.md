@@ -9,7 +9,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v6.0 (next: v6.1) ✓
+## Version: v6.1 (next: v6.2) ✓
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. All src/ files use top-level imports, no require(). Pure JS changes → edit files directly on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild needed.
@@ -125,6 +125,7 @@ v5.1 Swipe queue shuffled randomly each session (Fisher-Yates in Catalogue.jsx).
 v5.6 Carousel swipe: prev/next shirts slide in from left/right as you drag (standard 3-card carousel). Swipe left = advance, swipe right = go back. Like button exits left (advances forward).
 v6.0 Poster redesign: brand header 28→44px, color-tinted background per shirt color (15 color themes), vibe label badge (Claude Haiku via /api/generate-poster-text), CTA urgency text, pill-shaped size tag with border, price #fff + shadow (80px), URL text removed (QR sufficient). New api/generate-poster-text.js.
 v5.7 Meta Commerce Manager product feed: api/meta-feed.js — GET /api/meta-feed returns CSV of all Disponible products in Meta's feed format (id, title, description, availability, condition, price, link, image_link, brand, google_product_category, size, color). Register URL in Commerce Manager for hourly WhatsApp catalogue sync.
+v6.1 TikTok product feed: api/tiktok-feed.js — GET /api/tiktok-feed returns CSV in TikTok catalogue format (sku_id, title, description, availability, condition, price, link, image_link, additional_image_link, brand, product_type, size, color, gender). Register URL in TikTok Ads Manager → Assets → Catalogue.
 
 ## Rules
 1. Read file before editing
