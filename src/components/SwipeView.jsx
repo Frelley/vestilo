@@ -95,7 +95,11 @@ export default function SwipeView({
     if      (x >  SWIPE_THRESHOLD) goBack()
     else if (x < -SWIPE_THRESHOLD) animate('left', advance)
     else if (Math.abs(x) < 10 && Math.abs(y) < 10) setPhotoIdx(p => p >= photos.length ? 0 : p + 1)
-    else setDrag(d => ({ ...d, active: false, x: 0, y: 0 }))
+    else {
+      // Two-step: first enable transition, then reset position — keeps snap-back animated
+      setDrag(d => ({ ...d, active: false }))
+      requestAnimationFrame(() => setDrag(d => ({ ...d, x: 0, y: 0 })))
+    }
   }
 
   const w      = containerRef.current?.offsetWidth ?? 420
@@ -103,6 +107,7 @@ export default function SwipeView({
   const transition = swipeDir ? 'transform 0.32s ease' : drag.active ? 'none' : 'transform 0.25s ease'
   const likeOp = Math.min(Math.max(dx / SWIPE_THRESHOLD, 0), 1)
   const skipOp = Math.min(Math.max(-dx / SWIPE_THRESHOLD, 0), 1)
+  const rotate = drag.active && !swipeDir ? dx * 0.05 : 0
 
   if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={onRemoveLiked} />
 
@@ -164,34 +169,47 @@ export default function SwipeView({
           </div>
         ) : (
           <div ref={containerRef} style={{ width: '100%', maxWidth: 380, position: 'relative', height: 520, overflow: 'hidden' }}>
-            {/* Prev card — only mount when swiping right, avoiding snap-back artifact */}
+            {/* Prev card — only mount when swiping right */}
             {prevCard && (swipeDir === 'right' || (drag.active && dx > 0)) && (
-              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(calc(-100% + ${dx}px))`, transition, zIndex: 1 }}>
+              <div key={prevCard.id} style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(calc(-100% + ${dx}px))`, transition, zIndex: 1 }}>
                 {getPhotos(prevCard)[0]
                   ? <img src={getPhotos(prevCard)[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>👕</div>}
               </div>
             )}
-            {/* Next card — only mount when swiping left, avoiding snap-back artifact */}
-            {nextCard && (swipeDir === 'left' || (drag.active && dx < 0)) && (
-              <div style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(calc(100% + ${dx}px))`, transition, zIndex: 1 }}>
+            {/* Next card — stationary behind current, revealed as current slides away */}
+            {nextCard && (
+              <div key={nextCard.id} style={{ position: 'absolute', inset: 0, borderRadius: 16, overflow: 'hidden', background: '#241810', zIndex: 1 }}>
                 {getPhotos(nextCard)[0]
                   ? <img src={getPhotos(nextCard)[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>👕</div>}
               </div>
             )}
-            {/* Current card */}
+            {/* Current card — keyed by id so React mounts a fresh div on advance, never reuses the swiped-away element */}
             <div
+              key={current.id}
               ref={cardRef}
               onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
               onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={e => { e.preventDefault(); onEnd() }}
-              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px)`, transition, cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
+              style={{ position: 'absolute', inset: 0, zIndex: 2, borderRadius: 16, overflow: 'hidden', background: '#241810', transform: `translateX(${dx}px) rotate(${rotate}deg)`, transformOrigin: 'bottom center', transition, cursor: drag.active ? 'grabbing' : 'grab', touchAction: 'none', filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.55))' }}>
 
               {/* ── PHOTO SLIDES ── */}
               {photoIdx < photos.length ? (<>
                 {photos.length > 0
                   ? <img src={photos[photoIdx]} alt={current.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} draggable={false} />
                   : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100 }}>👕</div>}
+
+                {/* Drag feedback overlays */}
+                {skipOp > 0.05 && (
+                  <div style={{ position: 'absolute', top: 24, right: 16, border: '3px solid #c8622e', borderRadius: 6, padding: '4px 14px', color: '#c8622e', fontSize: 22, fontWeight: 800, fontFamily: "'Nunito', sans-serif", transform: 'rotate(12deg)', opacity: skipOp, pointerEvents: 'none' }}>
+                    PASAR
+                  </div>
+                )}
+                {likeOp > 0.05 && (
+                  <div style={{ position: 'absolute', top: 24, left: 16, border: '3px solid #7ab87a', borderRadius: 6, padding: '4px 14px', color: '#7ab87a', fontSize: 22, fontWeight: 800, fontFamily: "'Nunito', sans-serif", transform: 'rotate(-12deg)', opacity: likeOp, pointerEvents: 'none' }}>
+                    VOLVER
+                  </div>
+                )}
 
                 {/* Slide dots — photos + description */}
                 <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
