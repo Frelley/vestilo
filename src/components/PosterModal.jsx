@@ -69,6 +69,8 @@ async function fetchPosterText(product) {
         color: product.color,
         size: product.size,
         ai_tags: product.ai_tags,
+        content_themes: product.content_themes,
+        content_entities: product.content_entities,
         notes: product.notes,
       }),
     })
@@ -308,7 +310,7 @@ export function PosterModal({ product, onClose }) {
           <div style={{ width: 36, height: 4, borderRadius: 2, background: '#c4b9a8' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 12px' }}>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: '#1a1209' }}>Poster para redes sociales</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 17, fontWeight: 700, color: '#1a1209' }}>Poster para redes sociales</div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 20, color: '#9e8a6a', cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ padding: '0 20px 16px', display: 'flex', justifyContent: 'center' }}>

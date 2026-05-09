@@ -10,6 +10,7 @@ import { Toast, useToast } from '../components/Toast.jsx'
 import { PosterModal, usePosterModal } from '../components/PosterModal.jsx'
 import { ShareModal, useShareModal } from '../components/ShareModal.jsx'
 import { SellModal, useSellModal } from '../components/SellModal.jsx'
+import { formatContentTag } from '../../api/content-themes.js'
 
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - new Date(ts)) / 1000)
@@ -17,6 +18,125 @@ function timeAgo(ts) {
   if (s < 3600)  return `${Math.floor(s / 60)}m`
   if (s < 86400) return `${Math.floor(s / 3600)}h`
   return `${Math.floor(s / 86400)}d`
+}
+
+function needsAiAnalysis(product) {
+  if (!product || product.status === 'Vendido' || product.status === 'Archivado') return false
+  if (!(product.photos?.length || product.photo_url)) return false
+  return !product.ai_tags?.length || !product.content_themes?.length
+}
+
+function buildContentClusters(products, key) {
+  const clusters = {}
+  products.forEach(product => {
+    ;(product[key] || []).forEach(tag => {
+      if (!clusters[tag]) clusters[tag] = []
+      clusters[tag].push(product)
+    })
+  })
+  return Object.entries(clusters)
+    .map(([tag, items]) => ({ tag, items }))
+    .sort((a, b) => b.items.length - a.items.length || a.tag.localeCompare(b.tag))
+}
+
+function ThemeClusterPanel({ products, backfilling, onBackfill }) {
+  const activeProducts = products.filter(p => p.status !== 'Vendido' && p.status !== 'Archivado')
+  const themeClusters = buildContentClusters(activeProducts, 'content_themes')
+  const entityClusters = buildContentClusters(activeProducts, 'content_entities')
+  const groupedCount = activeProducts.filter(p => p.content_themes?.length || p.content_entities?.length).length
+  const missingCount = activeProducts.filter(p => !p.content_themes?.length).length
+
+  function renderCluster(cluster, kind) {
+    return (
+      <div key={`${kind}-${cluster.tag}`} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 12, padding: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1 }}>{kind === 'entity' ? 'Entidad' : 'Tema'}</div>
+            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 18, fontWeight: 700, color: '#1a1209' }}>{formatContentTag(cluster.tag)}</div>
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1209', background: '#f5f0e8', borderRadius: 999, padding: '4px 10px' }}>
+            {cluster.items.length} prenda{cluster.items.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+          {cluster.items.slice(0, 6).map(product => {
+            const photo = product.photos?.[0] || product.photo_url
+            return (
+              <Link
+                key={product.id}
+                to={`/admin/upload/${product.id}`}
+                style={{ display: 'flex', gap: 8, alignItems: 'center', textDecoration: 'none', color: '#1a1209', background: '#faf8f5', border: '1px solid #f0ede8', borderRadius: 10, padding: 8 }}
+              >
+                {photo
+                  ? <img src={photo} alt="" style={{ width: 42, height: 42, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+                  : <div style={{ width: 42, height: 42, borderRadius: 6, background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>👕</div>}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{product.name}</div>
+                  <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 2 }}>Talla {product.size} · Bs. {product.price}</div>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+
+        {cluster.items.length > 6 && (
+          <div style={{ marginTop: 10, fontSize: 11, color: '#9e8a6a' }}>+{cluster.items.length - 6} más en este grupo</div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginBottom: 16 }}>
+        {[
+          ['Con grupos', groupedCount, '#1a1209'],
+          ['Sin tema', missingCount, missingCount > 0 ? '#e65100' : '#2e7d32'],
+          ['Temas únicos', themeClusters.length, '#2e7d32'],
+          ['Entidades únicas', entityClusters.length, '#1565c0'],
+        ].map(([label, val, color]) => (
+          <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px', borderTop: `3px solid ${color}` }}>
+            <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
+            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+          </div>
+        ))}
+      </div>
+
+      {missingCount > 0 && (
+        <div style={{ background: '#fff8e1', border: '1px solid #ffe0b2', color: '#7a4b00', borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 13 }}>Hay {missingCount} prenda{missingCount !== 1 ? 's' : ''} sin grupos de contenido. Recorre IA para llenar los clusters.</div>
+          <button className="btn" onClick={() => onBackfill(false)} disabled={backfilling} style={{ whiteSpace: 'nowrap' }}>
+            {backfilling ? 'Analizando…' : '✦ IA faltantes'}
+          </button>
+        </div>
+      )}
+
+      {entityClusters.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Franquicias y fandoms</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+            {entityClusters.map(cluster => renderCluster(cluster, 'entity'))}
+          </div>
+        </div>
+      )}
+
+      {themeClusters.length > 0 ? (
+        <div>
+          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Temas para reels</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+            {themeClusters.map(cluster => renderCluster(cluster, 'theme'))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: 50, color: '#9e8a6a', background: '#fff', border: '1px solid #e8e0d4', borderRadius: 12 }}>
+          <div style={{ fontSize: 34, marginBottom: 8 }}>🎬</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", color: '#1a1209', marginBottom: 6 }}>Aún no hay clusters de contenido</div>
+          <div style={{ fontSize: 13 }}>Cuando la IA detecte temas como Harry Potter, cartoon o anime, aparecerán aquí.</div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function SearchLog() {
@@ -53,7 +173,7 @@ function SearchLog() {
         ].map(([label, val, color]) => (
           <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px', borderTop: `3px solid ${color}` }}>
             <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
           </div>
         ))}
       </div>
@@ -150,7 +270,7 @@ function ModeLog() {
         ].map(([label, val, color]) => (
           <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px', borderTop: `3px solid ${color}` }}>
             <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
           </div>
         ))}
       </div>
@@ -260,7 +380,7 @@ function OrdersPanel({ products, onRefresh }) {
       {orders.length === 0 && (
         <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
-          <div style={{ fontFamily: "'Playfair Display', serif" }}>No hay pedidos todavía</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif" }}>No hay pedidos todavía</div>
         </div>
       )}
 
@@ -276,12 +396,12 @@ function OrdersPanel({ products, onRefresh }) {
                 <div key={order.id} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 12, overflow: 'hidden' }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8e0d4', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: '#1a1209', fontSize: 15 }}>{order.customer_name}</div>
+                      <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, color: '#1a1209', fontSize: 15 }}>{order.customer_name}</div>
                       <div style={{ fontSize: 11, color: '#9e8a6a', marginTop: 2 }}>#{order.ref} · {timeAgo(order.created_at)}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: '#1a1209' }}>Bs. {nominal.toFixed(2)}</div>
-                      {order.discount > 0 && <div style={{ fontSize: 11, color: '#4CAF50' }}>− Bs. {order.discount} dto.</div>}
+                      <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, color: '#1a1209' }}>Bs. {nominal.toFixed(2)}</div>
+                      {order.discount > 0 && <div style={{ fontSize: 11, color: '#2e7d32' }}>− Bs. {order.discount} dto.</div>}
                     </div>
                   </div>
                   <div style={{ padding: '10px 16px', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -310,7 +430,7 @@ function OrdersPanel({ products, onRefresh }) {
                         type="number"
                         value={salePrice}
                         onChange={e => setSalePrice(e.target.value)}
-                        style={{ width: 100, padding: '8px 10px', borderRadius: 8, border: '1px solid #e8e0d4', fontSize: 14, fontFamily: "'Playfair Display', serif", fontWeight: 700 }}
+                        style={{ width: 100, padding: '8px 10px', borderRadius: 8, border: '1px solid #e8e0d4', fontSize: 14, fontFamily: "'Nunito', sans-serif", fontWeight: 700 }}
                         autoFocus
                       />
                       <button
@@ -428,10 +548,10 @@ export default function Admin() {
   }
 
   async function handleBackfill(force = false) {
-    const pending = products.filter(p =>
-      p.status !== 'Vendido' && p.status !== 'Archivado' &&
-      (p.photos?.length || p.photo_url) && (force || !p.ai_tags)
-    )
+    const pending = products.filter(p => {
+      if (force) return p.status !== 'Vendido' && p.status !== 'Archivado' && (p.photos?.length || p.photo_url)
+      return needsAiAnalysis(p)
+    })
     if (!pending.length) { show('Todos los productos ya tienen análisis IA'); return }
     setBackfilling(true)
     setBackfillProgress({ done: 0, total: pending.length })
@@ -562,7 +682,7 @@ export default function Admin() {
         ].map(([label, val, color]) => (
           <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px 10px', borderTop: `3px solid ${color}` }}>
             <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
           </div>
         ))}
       </div>
@@ -679,6 +799,8 @@ export default function Admin() {
       {/* Content */}
       {activeTab === 'orders' ? (
         <OrdersPanel products={products} onRefresh={load} />
+      ) : activeTab === 'themes' ? (
+        <ThemeClusterPanel products={products} backfilling={backfilling} onBackfill={handleBackfill} />
       ) : activeTab === 'searches' ? (
         <SearchLog />
       ) : activeTab === 'modes' ? (
@@ -689,6 +811,10 @@ export default function Admin() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
       ) : (
         <>
+          {activeTab === 'all' && (
+            <ThemeClusterPanel products={products} backfilling={backfilling} onBackfill={handleBackfill} />
+          )}
+
           <div style={{ padding: '8px 16px', fontSize: 12, color: '#9e8a6a', display: 'flex', alignItems: 'center', gap: 8 }}>
             {`${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`}
             {selectMode && filtered.length > 0 && (
@@ -704,7 +830,7 @@ export default function Admin() {
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>{activeTab === 'archived' ? '🗄' : '📦'}</div>
-              <div style={{ fontFamily: "'Playfair Display', serif" }}>
+              <div style={{ fontFamily: "'Nunito', sans-serif" }}>
                 {activeTab === 'archived' ? 'No hay productos archivados' : 'No hay productos aquí'}
               </div>
               {activeTab !== 'archived' && (
@@ -833,10 +959,10 @@ export default function Admin() {
                         </td>
                         <td style={{ padding: '9px 12px', fontSize: 11, color: '#9e8a6a' }}>{p.bundle_label || '—'}</td>
                         <td style={{ padding: '9px 12px', color: '#9e8a6a' }}>{p.size}</td>
-                        <td style={{ padding: '9px 12px', fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>Bs. {p.price}</td>
+                        <td style={{ padding: '9px 12px', fontFamily: "'Nunito', sans-serif", fontWeight: 700 }}>Bs. {p.price}</td>
                         <td style={{ padding: '9px 12px' }}>
                           {p.sold_price
-                            ? <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: p.sold_price < p.price ? '#c62828' : '#2e7d32' }}>Bs. {p.sold_price}</span>
+                            ? <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, color: p.sold_price < p.price ? '#c62828' : '#2e7d32' }}>Bs. {p.sold_price}</span>
                             : <span style={{ color: '#c4b9a8' }}>—</span>
                           }
                         </td>
