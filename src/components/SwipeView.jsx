@@ -190,7 +190,7 @@ export default function SwipeView({
                 {/* Slide dots — photos + description */}
                 <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
                   {[...photos, 'desc'].map((_, i) => (
-                    <div key={i} style={{ height: 3, width: i === photoIdx ? 20 : 6, borderRadius: i === photos.length ? 1 : 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'width 0.2s' }} />
+                    <div key={i} style={{ height: 3, width: 20, borderRadius: i === photos.length ? 1 : 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transform: `scaleX(${i === photoIdx ? 1 : 0.3})`, transformOrigin: 'center', transition: 'transform 0.2s' }} />
                   ))}
                 </div>
 
@@ -210,7 +210,7 @@ export default function SwipeView({
                 {/* Slide dots */}
                 <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
                   {[...photos, 'desc'].map((_, i) => (
-                    <div key={i} style={{ height: 3, width: i === photoIdx ? 20 : 6, borderRadius: i === photos.length ? 1 : 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'width 0.2s' }} />
+                    <div key={i} style={{ height: 3, width: 20, borderRadius: i === photos.length ? 1 : 2, background: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.4)', transform: `scaleX(${i === photoIdx ? 1 : 0.3})`, transformOrigin: 'center', transition: 'transform 0.2s' }} />
                   ))}
                 </div>
 

@@ -140,12 +140,6 @@ export default function Catalogue() {
   const filterBar = (
     <>
       {searchBar(false)}
-      <div style={{ display: 'flex', gap: 8, padding: '6px 12px', alignItems: 'center', justifyContent: 'flex-end' }}>
-        <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#f5e6c8' : 'transparent', color: hasFilter ? '#1a1209' : '#7a6651', border: `1px solid ${hasFilter ? '#c4b9a8' : '#e8e0d4'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-          {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1209', display: 'inline-block' }} />}
-          Filtros
-        </button>
-      </div>
       {showFilters && (
         <FilterPanel
           filterSize={filterSize} setFilterSize={setFilterSize}
@@ -161,6 +155,7 @@ export default function Catalogue() {
       products={queue} likedIds={likedIds} onToggleLike={toggleLike}
       onSwitchMode={switchMode} filterBar={filterBar}
       likedProducts={likedProducts} onRemoveLiked={removeLiked}
+      showFilters={showFilters} setShowFilters={setShowFilters} hasFilter={hasFilter}
     />
   )
 

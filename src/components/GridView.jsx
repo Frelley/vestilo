@@ -5,7 +5,7 @@ import CartHeart from './CartHeart.jsx'
 import PromoBanner from './PromoBanner.jsx'
 import LikedList from './LikedList.jsx'
 
-export default function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked }) {
+export default function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked, showFilters, setShowFilters, hasFilter }) {
   const navigate   = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
   const likedCount = likedProducts.length
@@ -26,7 +26,8 @@ export default function GridView({ products, likedIds, onToggleLike, onSwitchMod
           <div style={{ fontSize: 10, color: '#7a6651', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => {}} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#7a6651', cursor: 'pointer' }}>
+          <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#f5e6c8' : 'transparent', color: hasFilter ? '#1a1209' : '#7a6651', border: `1px solid ${hasFilter ? '#c4b9a8' : '#e8e0d4'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1209', display: 'inline-block' }} />}
             Filtros
           </button>
           <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#7a6651', cursor: 'pointer' }}>Swipe</button>
