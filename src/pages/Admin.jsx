@@ -20,6 +20,10 @@ function timeAgo(ts) {
   return `${Math.floor(s / 86400)}d`
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 function needsAiAnalysis(product) {
   if (!product || product.status === 'Vendido' || product.status === 'Archivado') return false
   if (!(product.photos?.length || product.photo_url)) return false
@@ -561,17 +565,33 @@ export default function Admin() {
       const p = pending[i]
       const photos = p.photos?.length ? p.photos : p.photo_url ? [p.photo_url] : []
       try {
-        const res = await fetch('/api/analyze-product', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_id: p.id, photo_urls: photos, force })
-        })
-        const data = await res.json().catch(() => null)
-        if (!res.ok) {
-          failedNames.push(p.name)
-        } else if (!data?.content_themes?.length && !data?.content_entities?.length) {
-          emptyThemeNames.push(p.name)
+        let attempts = 0
+        let finished = false
+
+        while (!finished && attempts < 3) {
+          attempts++
+          const res = await fetch('/api/analyze-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: p.id, photo_urls: photos, force })
+          })
+          const data = await res.json().catch(() => null)
+
+          if (res.status === 429) {
+            const retryAfterSec = Number(data?.retryAfter || 1)
+            await sleep((retryAfterSec * 1000) + 250)
+            continue
+          }
+
+          finished = true
+          if (!res.ok) {
+            failedNames.push(p.name)
+          } else if (!data?.content_themes?.length && !data?.content_entities?.length) {
+            emptyThemeNames.push(p.name)
+          }
         }
+
+        if (!finished) failedNames.push(p.name)
       } catch {
         failedNames.push(p.name)
       }

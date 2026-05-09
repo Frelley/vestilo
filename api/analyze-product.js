@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown'
-  const rl = rateLimit(ip, { limit: 10, windowMs: 60_000 })
+  const rl = rateLimit(ip, { limit: 120, windowMs: 60_000 })
   if (!rl.ok) return res.status(429).json({ error: 'Too many requests', retryAfter: rl.retryAfter })
 
   const { product_id, photo_urls, force } = req.body
