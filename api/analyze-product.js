@@ -1,5 +1,5 @@
 import { CANONICAL_TAGS, toCanonicalTags } from './tags.js'
-import { CONTENT_ENTITY_TAGS, CONTENT_THEME_TAGS, toContentEntityTags, toContentThemeTags } from './content-themes.js'
+import { CONTENT_ENTITY_TAGS, CONTENT_THEME_TAGS, inferContentThemeTags, toContentEntityTags, toContentThemeTags } from './content-themes.js'
 import { rateLimit } from './_rateLimit.js'
 
 export const maxDuration = 30
@@ -105,8 +105,10 @@ Reglas:
 
     const allTags = toCanonicalTags(rawTags)
 
-    const contentThemes = toContentThemeTags(parsed.content_themes || [])
     const contentEntities = toContentEntityTags(parsed.content_entities || [])
+    const llmThemes = toContentThemeTags(parsed.content_themes || [])
+    const fallbackThemes = inferContentThemeTags({ aiTags: allTags, contentEntities })
+    const contentThemes = toContentThemeTags([...llmThemes, ...fallbackThemes])
 
     const updateData = {
       ai_tags: allTags,

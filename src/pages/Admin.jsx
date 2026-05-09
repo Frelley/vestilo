@@ -555,19 +555,33 @@ export default function Admin() {
     if (!pending.length) { show('Todos los productos ya tienen análisis IA'); return }
     setBackfilling(true)
     setBackfillProgress({ done: 0, total: pending.length })
+    const emptyThemeNames = []
+    const failedNames = []
     for (let i = 0; i < pending.length; i++) {
       const p = pending[i]
       const photos = p.photos?.length ? p.photos : p.photo_url ? [p.photo_url] : []
-      await fetch('/api/analyze-product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: p.id, photo_urls: photos, force })
-      }).catch(() => {})
+      try {
+        const res = await fetch('/api/analyze-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: p.id, photo_urls: photos, force })
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok) {
+          failedNames.push(p.name)
+        } else if (!data?.content_themes?.length && !data?.content_entities?.length) {
+          emptyThemeNames.push(p.name)
+        }
+      } catch {
+        failedNames.push(p.name)
+      }
       setBackfillProgress({ done: i + 1, total: pending.length })
     }
     setBackfilling(false)
     setBackfillProgress(null)
     show(`Análisis IA completado para ${pending.length} productos`)
+    if (failedNames.length) console.warn('Backfill failures:', failedNames)
+    if (emptyThemeNames.length) console.warn('Backfill empty content tags:', emptyThemeNames)
     load()
   }
 
