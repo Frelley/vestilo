@@ -20,20 +20,20 @@ export default function GridView({ products, likedIds, onToggleLike, onSwitchMod
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#1a1209', position: 'sticky', top: 0, zIndex: 10 }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#1a1209' }}>Vestilo a tu sonso!</div>
-          <div style={{ fontSize: 10, color: '#7a6651', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 16, fontWeight: 800, color: '#c8622e' }}>Vestilo a tu sonso!</div>
+          <div style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#f5e6c8' : 'transparent', color: hasFilter ? '#1a1209' : '#7a6651', border: `1px solid ${hasFilter ? '#c4b9a8' : '#e8e0d4'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1a1209', display: 'inline-block' }} />}
+          <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#c8622e' : 'transparent', color: hasFilter ? '#fff' : '#9e8a6a', border: `1px solid ${hasFilter ? '#c8622e' : '#3d3020'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block' }} />}
             Filtros
           </button>
-          <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#7a6651', cursor: 'pointer' }}>Swipe</button>
-          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #e8e0d4', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <CartHeart liked={likedCount > 0} size={18} color="#7a6651" />
-            {likedCount > 0 && <span style={{ background: '#1a1209', color: '#f5e6c8', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
+          <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>Swipe</button>
+          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <CartHeart liked={likedCount > 0} size={18} color="#9e8a6a" />
+            {likedCount > 0 && <span style={{ background: '#c8622e', color: '#fff', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
           </button>
         </div>
       </div>
@@ -50,9 +50,9 @@ export default function GridView({ products, likedIds, onToggleLike, onSwitchMod
                   ? <img src={photo} alt={p.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
                   : <div style={{ aspectRatio: '3/4', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>👕</div>}
                 <div style={{ padding: '8px 10px 10px' }}>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#1a1209', marginBottom: 2 }}>{p.name}</div>
+                  <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: 700, color: '#1a1209', marginBottom: 2 }}>{p.name}</div>
                   <div style={{ fontSize: 11, color: '#7a6651' }}>Talla {p.size}</div>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginTop: 4 }}>Bs. {p.price}</div>
+                  <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginTop: 4 }}>Bs. {p.price}</div>
                 </div>
               </div>
               <button onClick={() => onToggleLike(p)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)', color: liked ? '#ef5350' : '#f5e6c8' }}>
@@ -64,7 +64,7 @@ export default function GridView({ products, likedIds, onToggleLike, onSwitchMod
         {products.length === 0 && (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>👕</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", color: '#1a1209', fontSize: 16 }}>No hay prendas disponibles</div>
+            <div style={{ fontFamily: "'Nunito', sans-serif", color: '#1a1209', fontSize: 16 }}>No hay prendas disponibles</div>
           </div>
         )}
       </div>

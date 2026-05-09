@@ -8,23 +8,24 @@
   --muted:    #9e8a6a;
   --border:   #e8e0d4;
   --green:    #25D366;
+  --accent:   #c8622e;
   --radius:   8px;
   --radius-lg: 14px;
   font-size: 16px;
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Nunito', sans-serif;
   background: var(--cream);
   color: var(--ink);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, .serif { font-family: 'Playfair Display', Georgia, serif; }
+h1, h2, h3, .serif { font-family: 'Nunito', sans-serif; font-weight: 800; }
 
 input, select, textarea, button {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Nunito', sans-serif;
   font-size: 14px;
 }
 
@@ -235,7 +236,7 @@ button { cursor: pointer; }
   position: absolute;
   inset: -3px;
   border-radius: 9px;
-  border: 2px solid #4CAF50;
+  border: 2px solid var(--accent);
   pointer-events: none;
   animation: cart-ring-expand 0.5s ease-out forwards;
 }

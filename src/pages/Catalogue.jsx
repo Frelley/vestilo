@@ -17,6 +17,7 @@ export default function Catalogue() {
   const [index, setIndex]         = useState(0)
   const [photoIdx, setPhotoIdx]   = useState(0)
   const [loading, setLoading]     = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [likedIds, setLikedIds]   = useState(getLiked)
   const [showFilters, setShowFilters] = useState(false)
   const [filterSize, setFilterSize]   = useState(() => getSavedFilters().filterSize || '')
@@ -40,11 +41,17 @@ export default function Catalogue() {
 
   async function load() {
     setLoading(true)
-    const { data } = await getProductsSorted({ status: 'Disponible' })
-    if (data) {
-      setProducts(data)
-      const max = Math.max(...data.map(p => p.price), 500)
-      setMaxPrice(max); setPriceMax(max)
+    setLoadError(false)
+    try {
+      const { data, error } = await getProductsSorted({ status: 'Disponible' })
+      if (error) throw error
+      if (data) {
+        setProducts(data)
+        const max = Math.max(...data.map(p => p.price), 500)
+        setMaxPrice(max); setPriceMax(max)
+      }
+    } catch {
+      setLoadError(true)
     }
     setLoading(false)
   }
@@ -96,6 +103,14 @@ export default function Catalogue() {
     <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: 32, height: 32, border: '2px solid #3d3020', borderTopColor: '#f5e6c8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+
+  if (loadError) return (
+    <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+      <div style={{ fontFamily: "'Nunito', sans-serif", color: '#f5e6c8', fontSize: 20, fontWeight: 800, marginBottom: 8 }}>No se pudo cargar el catálogo</div>
+      <div style={{ color: '#9e8a6a', fontSize: 13, marginBottom: 24 }}>Revisá tu conexión e intentá de nuevo</div>
+      <button onClick={load} style={{ background: '#c8622e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Reintentar</button>
     </div>
   )
 

@@ -146,11 +146,11 @@ export default function Product() {
           )}
 
           <div style={{ padding: 20 }}>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#1a1209', marginBottom: 8, lineHeight: 1.3 }}>
+            <h1 style={{ fontFamily: "'Nunito', sans-serif", fontSize: 22, fontWeight: 800, color: '#1a1209', marginBottom: 8, lineHeight: 1.3 }}>
               {product.name}
             </h1>
 
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#1a1209', marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 26, fontWeight: 800, color: '#c8622e', marginBottom: 14 }}>
               Bs. {product.price}
             </div>
 

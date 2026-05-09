@@ -24,7 +24,7 @@ export default function Header({ admin = false }) {
       zIndex: 100,
     }}>
       <Link to="/" style={{ textDecoration: 'none' }}>
-        <div style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 18, fontWeight: 700, letterSpacing: 0.5 }}>
+        <div style={{ fontFamily: "'Nunito', sans-serif", color: '#c8622e', fontSize: 18, fontWeight: 800, letterSpacing: 0.5 }}>
           Vestilo a tu sonso!
         </div>
         <div style={{ color: '#9e8a6a', fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', marginTop: -2 }}>
