@@ -1,4 +1,5 @@
 import { CANONICAL_TAGS, toCanonicalTags } from './tags.js'
+import { CONTENT_ENTITY_TAGS, CONTENT_THEME_TAGS, toContentEntityTags, toContentThemeTags } from './content-themes.js'
 import { rateLimit } from './_rateLimit.js'
 
 export const maxDuration = 30
@@ -50,11 +51,26 @@ Responde SOLO con JSON válido, sin texto adicional:
   "brand": "nombre de la marca si es visible en etiqueta, o null",
   "colors": ["colores de esta lista exacta: negro, blanco, gris, azul, azul-marino, rojo, verde, amarillo, cafe, naranja, rosa, morado, multicolor, beige, crema"],
   "gender": "mujer, hombre, o unisex",
-  "tags": ["8-15 tags de la lista canónica que describe la prenda — incluir tipo de prenda: camiseta, camisa, hoodie, buzo, musculosa, top, etc."]
+  "tags": ["8-15 tags de la lista canónica que describe la prenda — incluir tipo de prenda: camiseta, camisa, hoodie, buzo, musculosa, top, etc."],
+  "content_themes": ["1-4 temas de contenido de la lista permitida para agrupar reels o drops"],
+  "content_entities": ["0-3 franquicias, artistas, equipos o IPs visibles de la lista permitida"]
 }
 
 Los tags deben ser ÚNICAMENTE palabras de esta lista canónica (elige los más relevantes):
-${CANONICAL_TAGS.join(', ')}`,
+${CANONICAL_TAGS.join(', ')}
+
+Los content_themes deben salir ÚNICAMENTE de esta lista:
+${CONTENT_THEME_TAGS.join(', ')}
+
+Los content_entities deben salir ÚNICAMENTE de esta lista y solo si realmente se ven o se reconocen con mucha confianza:
+${CONTENT_ENTITY_TAGS.join(', ')}
+
+Reglas:
+- "tags" es para búsqueda objetiva del producto. No mezclar con campañas o vibes.
+- "content_themes" es para agrupar varias prendas en un mismo reel.
+- "content_entities" es para franquicias, bandas, equipos, shows o personajes concretos.
+- Si no aplica una entidad exacta, devuelve [].
+- No inventes marcas, personajes o franquicias.`,
             },
           ],
         }],
@@ -89,7 +105,14 @@ ${CANONICAL_TAGS.join(', ')}`,
 
     const allTags = toCanonicalTags(rawTags)
 
-    const updateData = { ai_tags: allTags }
+    const contentThemes = toContentThemeTags(parsed.content_themes || [])
+    const contentEntities = toContentEntityTags(parsed.content_entities || [])
+
+    const updateData = {
+      ai_tags: allTags,
+      content_themes: contentThemes,
+      content_entities: contentEntities,
+    }
     // if (parsed.description) {
     //   if (force) {
     //     updateData.notes = parsed.description
@@ -122,6 +145,8 @@ ${CANONICAL_TAGS.join(', ')}`,
       aesthetic: parsed.aesthetic,
       gender: parsed.gender,
       tags: allTags,
+      content_themes: contentThemes,
+      content_entities: contentEntities,
     })
   } catch (err) {
     return res.status(500).json({ error: err.message })

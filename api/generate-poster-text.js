@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   const rl = rateLimit(ip, { limit: 30, windowMs: 60_000 })
   if (!rl.ok) return res.status(429).json({ error: 'Too many requests', retryAfter: rl.retryAfter })
 
-  const { cat, color, size, ai_tags = [], notes } = req.body
+  const { cat, color, size, ai_tags = [], content_themes = [], content_entities = [], notes } = req.body
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   if (!anthropicKey) return res.status(500).json({ error: 'Missing ANTHROPIC_API_KEY' })
@@ -17,6 +17,8 @@ export default async function handler(req, res) {
 - Color: ${color || 'N/A'}
 - Talla: ${size || 'N/A'}
 - Tags: ${ai_tags.length ? ai_tags.join(', ') : 'N/A'}
+- Temas de contenido: ${content_themes.length ? content_themes.join(', ') : 'N/A'}
+- Entidades de contenido: ${content_entities.length ? content_entities.join(', ') : 'N/A'}
 - Descripción: ${notes || 'N/A'}
 
 Responde SOLO con JSON válido, sin texto extra:
