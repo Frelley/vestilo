@@ -22,6 +22,9 @@ export const CONTENT_THEME_TAGS = [
   'coquette-core',
   'clean-girl-core',
   'dark-academia-core',
+  'premium-brand',
+  'sportswear-brand',
+  'designer-flex',
   'cottagecore',
   'soft-goth',
   'girly-pink',
@@ -125,6 +128,10 @@ const AI_TAG_THEME_RULES = [
   { when: ['musical', 'banda'], add: ['music-merch-core'] },
   { when: ['rosa', 'rosa-pastel', 'fucsia', 'coquette', 'femenino'], add: ['girly-pink'] },
   { when: ['negro', 'gris', 'morado', 'rock'], add: ['soft-goth'] },
+  { when: ['nike', 'adidas', 'puma', 'reebok', 'jordan', 'champion'], add: ['sportswear-brand', 'streetwear-core'] },
+  { when: ['the-north-face', 'patagonia', 'carhartt', 'dickies', 'stussy', 'obey'], add: ['premium-brand', 'streetwear-core'] },
+  { when: ['supreme', 'bape', 'off-white', 'palm-angels', 'stone-island', 'balenciaga'], add: ['designer-flex', 'premium-brand', 'streetwear-core'] },
+  { when: ['lacoste', 'polo-ralph-lauren', 'tommy-hilfiger', 'calvin-klein', 'boss', 'guess', 'levis', 'hollister', 'abercrombie'], add: ['premium-brand'] },
 ]
 
 const CONTENT_TAG_ALIASES = {
@@ -150,6 +157,12 @@ const CONTENT_TAG_ALIASES = {
   'coquette': 'coquette-core',
   'clean-girl': 'clean-girl-core',
   'dark-academia': 'dark-academia-core',
+  'premium': 'premium-brand',
+  'high-quality': 'premium-brand',
+  'sportswear-brand': 'sportswear-brand',
+  'designer': 'designer-flex',
+  'luxury': 'designer-flex',
+  'brand-flex': 'designer-flex',
   'girly': 'girly-pink',
   'pink-girly': 'girly-pink',
   'grunge': 'alt-grunge',

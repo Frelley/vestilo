@@ -102,7 +102,7 @@ export const CANONICAL_TAGS = [
   'vans', 'quicksilver', 'billabong', 'rip-curl', 'carhartt', 'columbia',
   'the-north-face', 'patagonia', 'guess', 'lacoste', 'polo-ralph-lauren',
   'tommy-hilfiger', 'calvin-klein', 'boss', 'g-star', 'dickies', 'obey',
-  'stussy', 'bape', 'off-white', 'palm-angels', 'stone-island',
+  'stussy', 'bape', 'off-white', 'palm-angels', 'stone-island', 'balenciaga',
 
   // ── DETAILS / FEATURES ────────────────────────────────────────────────────
   'botones', 'cierre', 'cremallera', 'cordon', 'capucha', 'bolsillo',
@@ -511,6 +511,12 @@ export const SYNONYMS = {
   'brasilena':        'local',
   'boliviana':        'local',
   'hecha-en-bolivia': 'local',
+  'valenciaga':       'balenciaga',
+  'balenciaga-paris': 'balenciaga',
+  'offwhite':         'off-white',
+  'ralph-lauren':     'polo-ralph-lauren',
+  'tommy':            'tommy-hilfiger',
+  'ck':               'calvin-klein',
 
   // ── Details ───────────────────────────────────────────────────────────────
   'boton':            'botones',
