@@ -26,7 +26,7 @@ src/
   components/ Header · ProductCard · Toast · ShareModal · PosterModal · FilterPanel
               SwipeView · GridView · LikedList · PromoBanner · ModePicker
               FlyParticle · WhatsappIcon · BundleManager · SellModal · CartHeart
-api/          search · analyze-product · detect-colors · generate-poster-text
+api/          search · analyze-product · detect-colors
               tags · meta-feed · tiktok-feed · _rateLimit
 sql/          orders · search_logs · mode_logs · add_ai_tags
 db/           SCHEMA.md ← Supabase tables, columns, RLS, storage
@@ -34,7 +34,7 @@ db/           SCHEMA.md ← Supabase tables, columns, RLS, storage
 
 ## Key component notes
 - **ShareModal** — admin WA share, 3 templates, live preview, copy/open-WA/photo download
-- **PosterModal** — 1080x1080 canvas poster; calls /api/generate-poster-text for vibe+CTA; uses `product.notes` as description (not `product.name`)
+- **PosterModal** — 1080x1080 canvas poster; no caption API call; uses `product.notes` as description (not `product.name`)
 - **Catalogue** — mode picker (swipe/grid), smart sort (new float + like ratio), size/price filters (hard), color (soft sort only). Swipe is carousel; description is last slide
 - **Upload** — up to 4 photos, reorder, auto-label SIZE-NNN, price rounds to .99 on blur, AI color detect on first photo
 - **Admin** — tabs: products, 🔍 Búsquedas, 👆 Modos, 📋 Pedidos, 🗄 Archivados
