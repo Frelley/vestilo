@@ -59,26 +59,6 @@ function loadScript(src) {
   })
 }
 
-async function fetchPosterText(product) {
-  try {
-    const res = await fetch('/api/generate-poster-text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cat: product.cat,
-        color: product.color,
-        size: product.size,
-        ai_tags: product.ai_tags,
-        content_themes: product.content_themes,
-        content_entities: product.content_entities,
-        notes: product.notes,
-      }),
-    })
-    if (res.ok) return await res.json()
-  } catch {}
-  return { vibe: null, cta: null }
-}
-
 async function drawPoster(canvas, product, posterText = {}) {
   const SIZE = 1080
   canvas.width  = SIZE
@@ -254,8 +234,7 @@ export function PosterModal({ product, onClose }) {
     if (!product || !canvasRef.current) return
     setReady(false)
     async function run() {
-      const posterText = await fetchPosterText(product)
-      await drawPoster(canvasRef.current, product, posterText)
+      await drawPoster(canvasRef.current, product, {})
       setReady(true)
     }
     run()

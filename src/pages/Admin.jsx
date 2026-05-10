@@ -43,6 +43,37 @@ function buildContentClusters(products, key) {
     .sort((a, b) => b.items.length - a.items.length || a.tag.localeCompare(b.tag))
 }
 
+function sanitizeDownloadName(value) {
+  return String(value || 'vestilo')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+async function downloadProductPhotos(products, prefix = 'vestilo') {
+  for (const product of products) {
+    const photos = product.photos?.length ? product.photos : product.photo_url ? [product.photo_url] : []
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i]
+      if (!photo) continue
+      try {
+        const res = await fetch(photo)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${sanitizeDownloadName(prefix)}-${sanitizeDownloadName(product.name)}-${i + 1}.jpg`
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch {
+        window.open(photo, '_blank')
+      }
+      await sleep(120)
+    }
+  }
+}
+
 function ThemeClusterPanel({ products, backfilling, onBackfill }) {
   const activeProducts = products.filter(p => p.status !== 'Vendido' && p.status !== 'Archivado')
   const themeClusters = buildContentClusters(activeProducts, 'content_themes')
@@ -58,9 +89,14 @@ function ThemeClusterPanel({ products, backfilling, onBackfill }) {
             <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1 }}>{kind === 'entity' ? 'Entidad' : 'Tema'}</div>
             <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 18, fontWeight: 700, color: '#1a1209' }}>{formatContentTag(cluster.tag)}</div>
           </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1209', background: '#f5f0e8', borderRadius: 999, padding: '4px 10px' }}>
-            {cluster.items.length} prenda{cluster.items.length !== 1 ? 's' : ''}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1209', background: '#f5f0e8', borderRadius: 999, padding: '4px 10px' }}>
+              {cluster.items.length} prenda{cluster.items.length !== 1 ? 's' : ''}
+            </span>
+            <button className="btn" onClick={() => downloadProductPhotos(cluster.items, cluster.tag)} style={{ fontSize: 11, padding: '6px 10px', whiteSpace: 'nowrap' }}>
+              ⬇ Fotos
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
@@ -93,6 +129,16 @@ function ThemeClusterPanel({ products, backfilling, onBackfill }) {
 
   return (
     <div style={{ padding: 16 }}>
+      <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Marketing</div>
+          <div style={{ fontSize: 13, color: '#1a1209' }}>Clusters y descargas crudas. Sin captions ni poster automáticos.</div>
+        </div>
+        <button className="btn" onClick={() => downloadProductPhotos(activeProducts, 'marketing')} style={{ whiteSpace: 'nowrap' }}>
+          ⬇ Descargar fotos
+        </button>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginBottom: 16 }}>
         {[
           ['Con grupos', groupedCount, '#1a1209'],
@@ -739,10 +785,13 @@ export default function Admin() {
             {label}
           </button>
         ))}
+        <button style={tabStyle('marketing')} onClick={() => { setActiveTab('marketing'); setFilterStatus(''); setSelectMode(false); setSelected({}) }}>
+          ðŸŽ¬ Marketing
+        </button>
       </div>
 
       {/* Toolbar — hidden on Orders, Bundles, Searches, and Modes tabs */}
-      {activeTab !== 'orders' && activeTab !== 'bundles' && activeTab !== 'searches' && activeTab !== 'modes' && (
+      {activeTab !== 'orders' && activeTab !== 'bundles' && activeTab !== 'marketing' && activeTab !== 'searches' && activeTab !== 'modes' && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', flexWrap: 'wrap' }}>
           <input
             type="text"
@@ -833,7 +882,7 @@ export default function Admin() {
       {/* Content */}
       {activeTab === 'orders' ? (
         <OrdersPanel products={products} onRefresh={load} />
-      ) : activeTab === 'themes' ? (
+      ) : activeTab === 'themes' || activeTab === 'marketing' ? (
         <ThemeClusterPanel products={products} backfilling={backfilling} onBackfill={handleBackfill} />
       ) : activeTab === 'searches' ? (
         <SearchLog />
@@ -845,10 +894,6 @@ export default function Admin() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
       ) : (
         <>
-          {activeTab === 'all' && (
-            <ThemeClusterPanel products={products} backfilling={backfilling} onBackfill={handleBackfill} />
-          )}
-
           <div style={{ padding: '8px 16px', fontSize: 12, color: '#9e8a6a', display: 'flex', alignItems: 'center', gap: 8 }}>
             {`${filtered.length} producto${filtered.length !== 1 ? 's' : ''}`}
             {selectMode && filtered.length > 0 && (
