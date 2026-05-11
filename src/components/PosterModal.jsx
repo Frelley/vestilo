@@ -59,7 +59,7 @@ function loadScript(src) {
   })
 }
 
-async function drawPoster(canvas, product, posterText = {}) {
+async function drawPoster(canvas, product) {
   const SIZE = 1080
   canvas.width  = SIZE
   canvas.height = SIZE
@@ -93,7 +93,6 @@ async function drawPoster(canvas, product, posterText = {}) {
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, SIZE, SIZE)
 
-  // Brand — bigger, stronger
   ctx.fillStyle = 'rgba(245,230,200,0.95)'
   ctx.font = 'bold 44px Georgia, serif'
   ctx.textAlign = 'left'
@@ -108,9 +107,8 @@ async function drawPoster(canvas, product, posterText = {}) {
   ctx.font = '18px Arial, sans-serif'
   ctx.fillText('SANTA CRUZ · BOLIVIA', 52, 108)
 
-  // Description + vibe label
   const desc = (product.notes || '').trim()
-  let descStartY = SIZE - 290
+  const descStartY = SIZE - 290
 
   if (desc) {
     ctx.fillStyle = '#f5e6c8'
@@ -125,48 +123,9 @@ async function drawPoster(canvas, product, posterText = {}) {
       else line = test
     }
     if (line) lines.push(line)
-    const lineH = 50
-    descStartY = SIZE - 290 - (lines.length - 1) * lineH
-
-    // Vibe pill above description
-    if (posterText.vibe) {
-      ctx.font = 'bold 18px Arial, sans-serif'
-      const vibeText = posterText.vibe.toUpperCase()
-      const vibeW = ctx.measureText(vibeText).width + 28
-      const vibeTop = descStartY - 52
-      ctx.fillStyle = 'rgba(245,230,200,0.15)'
-      ctx.strokeStyle = 'rgba(245,230,200,0.5)'
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.roundRect(52, vibeTop, vibeW, 32, 6)
-      ctx.fill()
-      ctx.stroke()
-      ctx.fillStyle = '#f5e6c8'
-      ctx.fillText(vibeText, 66, vibeTop + 22)
-    }
-
-    ctx.fillStyle = '#f5e6c8'
-    ctx.font = '500 38px Georgia, serif'
-    ctx.textAlign = 'left'
-    lines.forEach((l, i) => ctx.fillText(l, 52, descStartY + i * lineH))
-  } else if (posterText.vibe) {
-    // No description — vibe pill still shows above price area
-    ctx.font = 'bold 18px Arial, sans-serif'
-    const vibeText = posterText.vibe.toUpperCase()
-    const vibeW = ctx.measureText(vibeText).width + 28
-    const vibeTop = SIZE - 320
-    ctx.fillStyle = 'rgba(245,230,200,0.15)'
-    ctx.strokeStyle = 'rgba(245,230,200,0.5)'
-    ctx.lineWidth = 1.5
-    ctx.beginPath()
-    ctx.roundRect(52, vibeTop, vibeW, 32, 6)
-    ctx.fill()
-    ctx.stroke()
-    ctx.fillStyle = '#f5e6c8'
-    ctx.fillText(vibeText, 66, vibeTop + 22)
+    lines.forEach((l, i) => ctx.fillText(l, 52, descStartY + i * 50))
   }
 
-  // Price — brighter, bigger
   ctx.shadowColor = 'rgba(0,0,0,0.5)'
   ctx.shadowBlur = 14
   ctx.fillStyle = '#ffffff'
@@ -175,7 +134,6 @@ async function drawPoster(canvas, product, posterText = {}) {
   ctx.fillText(`Bs. ${product.price}`, 52, SIZE - 148)
   ctx.shadowBlur = 0
 
-  // Size pill — pill shape, cleaner border
   ctx.font = '600 22px Arial, sans-serif'
   const sizeText = `Talla ${product.size}`
   const pillW = ctx.measureText(sizeText).width + 36
@@ -191,15 +149,6 @@ async function drawPoster(canvas, product, posterText = {}) {
   ctx.textAlign = 'center'
   ctx.fillText(sizeText, 52 + pillW / 2, pillTop + 27)
 
-  // CTA text
-  if (posterText.cta) {
-    ctx.fillStyle = 'rgba(245,230,200,0.72)'
-    ctx.font = 'italic 22px Georgia, serif'
-    ctx.textAlign = 'left'
-    ctx.fillText(posterText.cta, 52, SIZE - 58)
-  }
-
-  // QR code
   try {
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js')
     const qrSize = 160
@@ -228,22 +177,19 @@ export function PosterModal({ product, onClose }) {
   const canvasRef  = useRef(null)
   const [ready, setReady]     = useState(false)
   const [copying, setCopying] = useState(false)
-  const [copied, setCopied]   = useState(null)
+  const [copied, setCopied]   = useState(false)
 
   useEffect(() => {
     if (!product || !canvasRef.current) return
     setReady(false)
     async function run() {
-      await drawPoster(canvasRef.current, product, {})
+      await drawPoster(canvasRef.current, product)
       setReady(true)
     }
     run()
   }, [product])
 
   if (!product) return null
-
-  const url     = `${STORE_URL}/p/${product.id}`
-  const caption = `${product.notes ? product.notes + '\n\n' : ''}Talla ${product.size} · Bs. ${product.price}\n\n${url}`
 
   async function copyImage() {
     if (!canvasRef.current) return
@@ -252,8 +198,8 @@ export function PosterModal({ product, onClose }) {
       canvasRef.current.toBlob(async blob => {
         try {
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-          setCopied('image')
-          setTimeout(() => setCopied(null), 2500)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2500)
         } catch {
           const a = document.createElement('a')
           a.href = URL.createObjectURL(blob)
@@ -262,16 +208,12 @@ export function PosterModal({ product, onClose }) {
         }
         setCopying(false)
       }, 'image/png')
-    } catch { setCopying(false) }
+    } catch {
+      setCopying(false)
+    }
   }
 
-  async function copyCaption() {
-    await navigator.clipboard.writeText(caption)
-    setCopied('caption')
-    setTimeout(() => setCopied(null), 2500)
-  }
-
-  async function downloadImage() {
+  function downloadImage() {
     if (!canvasRef.current) return
     canvasRef.current.toBlob(blob => {
       const a = document.createElement('a')
@@ -290,7 +232,7 @@ export function PosterModal({ product, onClose }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 12px' }}>
           <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 17, fontWeight: 700, color: '#1a1209' }}>Poster para redes sociales</div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 20, color: '#9e8a6a', cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 20, color: '#9e8a6a', cursor: 'pointer' }}>×</button>
         </div>
         <div style={{ padding: '0 20px 16px', display: 'flex', justifyContent: 'center' }}>
           <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
@@ -302,19 +244,12 @@ export function PosterModal({ product, onClose }) {
             )}
           </div>
         </div>
-        <div style={{ margin: '0 20px 16px', background: '#f0ede8', borderRadius: 10, padding: '12px 14px' }}>
-          <div style={{ fontSize: 11, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Caption</div>
-          <div style={{ fontSize: 13, color: '#3d3020', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{caption}</div>
-        </div>
         <div style={{ display: 'flex', gap: 10, padding: '0 20px 36px', flexWrap: 'wrap' }}>
-          <button onClick={copyImage} disabled={!ready || copying} style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: `1px solid ${copied === 'image' ? '#a5d6a7' : '#e8e0d4'}`, background: copied === 'image' ? '#e8f5e9' : '#fff', color: copied === 'image' ? '#2e7d32' : '#1a1209', fontSize: 13, fontWeight: 600, cursor: ready ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s' }}>
-            {copied === 'image' ? '✓ Imagen copiada' : copying ? '...' : '📋 Copiar imagen'}
+          <button onClick={copyImage} disabled={!ready || copying} style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: `1px solid ${copied ? '#a5d6a7' : '#e8e0d4'}`, background: copied ? '#e8f5e9' : '#fff', color: copied ? '#2e7d32' : '#1a1209', fontSize: 13, fontWeight: 600, cursor: ready ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s' }}>
+            {copied ? 'Imagen copiada' : copying ? '...' : 'Copiar imagen'}
           </button>
           <button onClick={downloadImage} disabled={!ready} style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: '1px solid #e8e0d4', background: '#fff', color: '#1a1209', fontSize: 13, fontWeight: 600, cursor: ready ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            ⬇️ Descargar
-          </button>
-          <button onClick={copyCaption} style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: `1px solid ${copied === 'caption' ? '#a5d6a7' : '#e8e0d4'}`, background: copied === 'caption' ? '#e8f5e9' : '#fff', color: copied === 'caption' ? '#2e7d32' : '#1a1209', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s' }}>
-            {copied === 'caption' ? '✓ Caption copiado' : '📝 Copiar caption'}
+            Descargar
           </button>
         </div>
       </div>
