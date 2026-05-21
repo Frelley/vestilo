@@ -5,15 +5,16 @@ export const maxDuration = 300
 const BUCKET = 'product-photos'
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
 const IMAGE_SIZE = process.env.OPENAI_IMAGE_SIZE || '1024x1536'
-const IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'low'
+const IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'medium'
 const OUTPUT_FORMAT = process.env.OPENAI_IMAGE_OUTPUT_FORMAT || 'jpeg'
-const OUTPUT_COMPRESSION = Number(process.env.OPENAI_IMAGE_OUTPUT_COMPRESSION || 72)
+const OUTPUT_COMPRESSION = Number(process.env.OPENAI_IMAGE_OUTPUT_COMPRESSION || 86)
 
 const EDIT_PROMPT = `Edit this product photo for mobile ecommerce.
-Preserve the actual clothing item and mannequin as faithfully as possible: same color, print, logo/text, fabric texture, wrinkles on the garment, shape, neckline, sleeves, and proportions.
+Preserve the actual clothing item and mannequin as faithfully as possible: same color, print, logo/text, fabric texture, wrinkles on the garment, seams, stitching, shape, neckline, sleeves, and proportions.
 Clean the background into a smooth neutral off-white studio backdrop.
 Clean the product silhouette edges where the product meets the background: remove rough halos, background bleed, jagged edges, and distracting cast shadows.
 Keep a subtle natural grounding shadow.
+Do not redraw, smooth, upscale, stylize, repaint, or reinterpret the product.
 Do not add a person, hanger, props, text, watermark, labels, or change the product.`
 
 function json(res, status, body) {
