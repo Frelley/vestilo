@@ -2,6 +2,7 @@
 
 | Version | Changes |
 |---|---|
+| v7.0 | Locked ecommerce photo cleanup to the budget model with medium quality and lighter ironing that preserves natural fabric texture. |
 | v6.9 | Limited ecommerce photo cleanup to the first two product photos so front/back are processed while extra detail photos stay unchanged. |
 | v6.8 | Updated ecommerce photo cleanup prompt to lightly iron/steam shirts by reducing harsh wrinkles while preserving fabric texture and product details. |
 | v6.7 | Tuned ecommerce photo cleanup quality defaults: medium image quality, lighter JPEG compression, and stricter product-preservation prompt. |

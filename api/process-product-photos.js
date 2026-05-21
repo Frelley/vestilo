@@ -3,7 +3,7 @@ import { rateLimit } from './_rateLimit.js'
 export const maxDuration = 300
 
 const BUCKET = 'product-photos'
-const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
+const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1-mini'
 const IMAGE_SIZE = process.env.OPENAI_IMAGE_SIZE || '1024x1536'
 const IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'medium'
 const OUTPUT_FORMAT = process.env.OPENAI_IMAGE_OUTPUT_FORMAT || 'jpeg'
@@ -12,11 +12,11 @@ const MAX_PROCESSED_PHOTOS = 2
 
 const EDIT_PROMPT = `Edit this product photo for mobile ecommerce.
 Preserve the actual clothing item and mannequin as faithfully as possible: same color, print, logo/text, fabric texture, wrinkles on the garment, seams, stitching, shape, neckline, sleeves, and proportions.
-Make the shirt look neatly presented and lightly ironed or steamed: reduce strong wrinkles, harsh creases, and crushed fabric areas while keeping natural fabric texture and realistic drape.
+Apply only light ironing or steaming: reduce the most distracting harsh creases and crushed fabric areas slightly, while keeping natural wrinkles, cotton texture, and realistic drape visible.
 Clean the background into a smooth neutral off-white studio backdrop.
 Clean the product silhouette edges where the product meets the background: remove rough halos, background bleed, jagged edges, and distracting cast shadows.
 Keep a subtle natural grounding shadow.
-Do not redraw, smooth, upscale, stylize, repaint, or reinterpret the product.
+Do not redraw, over-smooth, upscale, stylize, repaint, or reinterpret the product.
 Do not add a person, hanger, props, text, watermark, labels, or change the product.`
 
 function json(res, status, body) {
