@@ -148,9 +148,20 @@ export default function Upload() {
           return await uploadPhoto(p.file, productId || `temp-${Date.now()}-${Math.random()}`)
         })
       )
+      const hasNewPhotos = photos.some(p => !p.existing_url)
 
       const photo_url = uploadedUrls[0] || null
-      const photoData = { photo_url, photos: uploadedUrls }
+      const photoData = {
+        photo_url,
+        photos: uploadedUrls,
+        ...(hasNewPhotos ? {
+          original_photos: uploadedUrls,
+          photo_processing_status: 'pending',
+          photo_processed_at: null,
+          photo_processing_error: null,
+          photo_processing_model: null,
+        } : {}),
+      }
 
       const bundleData = {
         bundle_id:    form.bundle_id    || null,
@@ -176,7 +187,15 @@ export default function Upload() {
         const finalUrls = await Promise.all(
           photos.map(p => uploadPhoto(p.file, newProduct.id))
         )
-        await updateProduct(newProduct.id, { photo_url: finalUrls[0] || null, photos: finalUrls })
+        await updateProduct(newProduct.id, {
+          photo_url: finalUrls[0] || null,
+          photos: finalUrls,
+          original_photos: finalUrls,
+          photo_processing_status: finalUrls[0] ? 'pending' : null,
+          photo_processed_at: null,
+          photo_processing_error: null,
+          photo_processing_model: null,
+        })
         show('Producto guardado')
         if (finalUrls[0]) {
           fetch('/api/analyze-product', {

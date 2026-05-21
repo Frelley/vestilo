@@ -1,5 +1,14 @@
 # Vestilo a tu sonso — Project Map
 
+## Phases
+| Phase | Goal | Done? |
+|-------|------|-------|
+| 1 | Live store — product catalogue, swipe/like, cart, WhatsApp checkout | [x] |
+| 2 | Growth — full catalogue (20+ products), social content pipeline, first sales | [ ] |
+| 3 | Monetize — consistent weekly sales, Instagram audience, paid ads profitable | [ ] |
+
+Current phase: 2
+
 ## Live URLs
 - Public: https://vestilo.vercel.app
 - Admin:  https://vestilo.vercel.app/admin/login
@@ -9,7 +18,7 @@
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v6.4 (next: v6.5)
+## Version: v6.6 (next: v6.7)
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. Top-level imports only, no require(). Pure JS changes → edit on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild.
@@ -57,7 +66,7 @@ db/           SCHEMA.md ← Supabase tables, columns, RLS, storage
 ## Rules
 1. Read file before editing
 2. No require() — top-level imports only
-3. Bump version before every change (current v6.1, next v6.2)
+3. Bump version before every change (current v6.6, next v6.7)
 4. No reused filenames for zips
 5. Color filter is ALWAYS soft sort, never hard filter
 6. New Supabase table/function → write .sql file first, update db/SCHEMA.md

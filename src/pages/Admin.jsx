@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getProducts, updateProduct, deleteProduct, freeLabel, supabase, getOrders, confirmOrderSold, releaseOrder } from '../lib/supabase.js'
 import CartHeart from '../components/CartHeart.jsx'
-import { STATUS_STYLES, daysSince, formatDate, colorsArray } from '../lib/constants.js'
+import { STATUS_STYLES, daysSince, colorsArray } from '../lib/constants.js'
 import Header from '../components/Header.jsx'
 import ProductCard from '../components/ProductCard.jsx'
 import BundleManager from '../components/BundleManager.jsx'
@@ -28,6 +28,23 @@ function needsAiAnalysis(product) {
   if (!product || product.status === 'Vendido' || product.status === 'Archivado') return false
   if (!(product.photos?.length || product.photo_url)) return false
   return !product.ai_tags?.length || !product.content_themes?.length
+}
+
+function hasProductPhotos(product) {
+  return !!(product?.photos?.length || product?.photo_url)
+}
+
+function needsPhotoProcessing(product) {
+  if (!product || product.status === 'Vendido' || product.status === 'Archivado') return false
+  if (!hasProductPhotos(product)) return false
+  return product.photo_processing_status !== 'done'
+}
+
+function photoProcessingLabel(product) {
+  if (product.photo_processing_status === 'processing') return 'Procesando'
+  if (product.photo_processing_status === 'done') return 'Rehacer'
+  if (product.photo_processing_status === 'failed') return 'Reintentar'
+  return 'Fondo'
 }
 
 function buildContentClusters(products, key) {
@@ -306,7 +323,6 @@ function ModeLog() {
   const now        = new Date()
   const dayStart   = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const weekStart  = new Date(dayStart.getTime() - 6 * 24 * 60 * 60 * 1000)
-  const todayLogs  = logs.filter(l => new Date(l.created_at) >= dayStart)
   const weekLogs   = logs.filter(l => new Date(l.created_at) >= weekStart)
 
   return (
@@ -551,6 +567,9 @@ export default function Admin() {
   const [activeTab, setActiveTab]       = useState('all')
   const [backfilling, setBackfilling]   = useState(false)
   const [backfillProgress, setBackfillProgress] = useState(null)
+  const [photoProcessing, setPhotoProcessing] = useState(false)
+  const [photoProgress, setPhotoProgress] = useState(null)
+  const [processingPhotoIds, setProcessingPhotoIds] = useState({})
   const [selected, setSelected]         = useState({})   // { [id]: true }
   const [selectMode, setSelectMode]     = useState(false)
 
@@ -651,6 +670,74 @@ export default function Admin() {
     load()
   }
 
+  async function processProductPhotos(product, { force = true } = {}) {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    if (!token) throw new Error('Sesion admin expirada')
+
+    setProcessingPhotoIds(prev => ({ ...prev, [product.id]: true }))
+    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, photo_processing_status: 'processing', photo_processing_error: null } : p))
+
+    try {
+      const res = await fetch('/api/process-product-photos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ product_id: product.id, force }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'No se pudo procesar fotos')
+      if (data?.product) {
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, ...data.product } : p))
+      }
+      return data?.product
+    } finally {
+      setProcessingPhotoIds(prev => {
+        const next = { ...prev }
+        delete next[product.id]
+        return next
+      })
+    }
+  }
+
+  async function handleProcessProductPhotos(product) {
+    if (!hasProductPhotos(product)) return
+    try {
+      await processProductPhotos(product, { force: product.photo_processing_status === 'done' })
+      show('Fotos procesadas')
+    } catch (err) {
+      show(err.message || 'Error procesando fotos', 'error')
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, photo_processing_status: 'failed', photo_processing_error: err.message } : p))
+    }
+  }
+
+  async function handleProcessPendingPhotos() {
+    const pending = products.filter(needsPhotoProcessing)
+    if (!pending.length) { show('No hay fotos pendientes'); return }
+    setPhotoProcessing(true)
+    setPhotoProgress({ done: 0, total: pending.length })
+    const failed = []
+
+    for (let i = 0; i < pending.length; i++) {
+      const product = pending[i]
+      try {
+        await processProductPhotos(product, { force: false })
+      } catch (err) {
+        failed.push(product.name)
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, photo_processing_status: 'failed', photo_processing_error: err.message } : p))
+      }
+      setPhotoProgress({ done: i + 1, total: pending.length })
+    }
+
+    setPhotoProcessing(false)
+    setPhotoProgress(null)
+    show(failed.length ? `Fotos procesadas con ${failed.length} error(es)` : `Fotos procesadas para ${pending.length} producto${pending.length !== 1 ? 's' : ''}`)
+    if (failed.length) console.warn('Photo processing failures:', failed)
+    load()
+  }
+
   // Soft-delete: moves to Archivado (hidden from public, recoverable)
   async function handleArchive(id) {
     await updateProduct(id, { status: 'Archivado' })
@@ -714,6 +801,7 @@ export default function Admin() {
     reserved:  products.filter(p => p.status === 'Reservado').length,
     sold:      products.filter(p => p.status === 'Vendido').length,
     old:       products.filter(p => p.status === 'Disponible' && daysSince(p.created_at) > 30).length,
+    photoPending: products.filter(needsPhotoProcessing).length,
   }
 
   const filtered = products.filter(p => {
@@ -829,6 +917,18 @@ export default function Admin() {
                 title="Regenerar descripciones con el nuevo estilo"
               >
                 {backfilling ? `IA ${backfillProgress?.done}/${backfillProgress?.total}` : '↺ IA todo'}
+              </button>
+              <button
+                className="btn"
+                onClick={handleProcessPendingPhotos}
+                disabled={photoProcessing || summary.photoPending === 0}
+                style={{ padding: '8px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                title="Procesar fotos pendientes con fondo limpio"
+              >
+                {photoProcessing
+                  ? `Fotos ${photoProgress?.done}/${photoProgress?.total}`
+                  : `Fondo ${summary.photoPending}`
+                }
               </button>
             </>
           )}
@@ -980,6 +1080,14 @@ export default function Admin() {
                         </button>
                         <button onClick={() => openPoster(p)} style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#1a1209', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           🖼️
+                        </button>
+                        <button
+                          onClick={() => handleProcessProductPhotos(p)}
+                          disabled={!hasProductPhotos(p) || !!processingPhotoIds[p.id]}
+                          title={p.photo_processing_error || 'Procesar fondo y bordes'}
+                          style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #e8e0d4', background: p.photo_processing_status === 'failed' ? '#fff3e0' : '#faf8f5', color: p.photo_processing_status === 'failed' ? '#e65100' : '#1a1209', fontSize: 11, fontWeight: 600, cursor: processingPhotoIds[p.id] ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          {processingPhotoIds[p.id] ? '...' : photoProcessingLabel(p)}
                         </button>
                         <button onClick={() => handleArchive(p.id)} title="Archivar" style={{ padding: 6, borderRadius: 6, border: '1px solid #e8e0d4', background: '#faf8f5', color: '#9e8a6a', fontSize: 12, cursor: 'pointer' }}>
                           🗄

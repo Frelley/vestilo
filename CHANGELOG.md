@@ -2,6 +2,8 @@
 
 | Version | Changes |
 |---|---|
+| v6.6 | Added OpenAI ecommerce photo cleanup: per-product processing, pending-batch admin action, original photo preservation, and Supabase processing metadata. |
+| v6.5 | Replaced Claude Haiku live AI calls with OpenAI `gpt-5.4-nano` for color detection and search fallback. |
 | v1.0 | Initial build |
 | v1.1 | Real credentials |
 | v1.2 | Multi-photo support |
