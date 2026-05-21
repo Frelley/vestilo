@@ -11,6 +11,7 @@ const OUTPUT_COMPRESSION = Number(process.env.OPENAI_IMAGE_OUTPUT_COMPRESSION ||
 
 const EDIT_PROMPT = `Edit this product photo for mobile ecommerce.
 Preserve the actual clothing item and mannequin as faithfully as possible: same color, print, logo/text, fabric texture, wrinkles on the garment, seams, stitching, shape, neckline, sleeves, and proportions.
+Make the shirt look neatly presented and lightly ironed or steamed: reduce strong wrinkles, harsh creases, and crushed fabric areas while keeping natural fabric texture and realistic drape.
 Clean the background into a smooth neutral off-white studio backdrop.
 Clean the product silhouette edges where the product meets the background: remove rough halos, background bleed, jagged edges, and distracting cast shadows.
 Keep a subtle natural grounding shadow.

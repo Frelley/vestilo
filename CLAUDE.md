@@ -18,7 +18,7 @@ Current phase: 2
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v6.7 (next: v6.8)
+## Version: v6.8 (next: v6.9)
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. Top-level imports only, no require(). Pure JS changes → edit on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild.
