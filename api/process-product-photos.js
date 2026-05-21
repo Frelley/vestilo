@@ -8,6 +8,7 @@ const IMAGE_SIZE = process.env.OPENAI_IMAGE_SIZE || '1024x1536'
 const IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'medium'
 const OUTPUT_FORMAT = process.env.OPENAI_IMAGE_OUTPUT_FORMAT || 'jpeg'
 const OUTPUT_COMPRESSION = Number(process.env.OPENAI_IMAGE_OUTPUT_COMPRESSION || 86)
+const MAX_PROCESSED_PHOTOS = 2
 
 const EDIT_PROMPT = `Edit this product photo for mobile ecommerce.
 Preserve the actual clothing item and mannequin as faithfully as possible: same color, print, logo/text, fabric texture, wrinkles on the garment, seams, stitching, shape, neckline, sleeves, and proportions.
@@ -191,17 +192,19 @@ export default async function handler(req, res) {
       photo_processing_error: null,
     }, env)
 
+    const photosToProcess = originals.slice(0, MAX_PROCESSED_PHOTOS)
     const processedUrls = []
-    for (let i = 0; i < originals.length; i++) {
-      const bytes = await editPhoto(originals[i])
+    for (let i = 0; i < photosToProcess.length; i++) {
+      const bytes = await editPhoto(photosToProcess[i])
       const publicUrl = await uploadProcessedPhoto(product_id, i, bytes, env)
       processedUrls.push(publicUrl)
     }
+    const finalPhotos = [...processedUrls, ...originals.slice(MAX_PROCESSED_PHOTOS)]
 
     const updated = await patchProduct(product_id, {
       original_photos: originals,
-      photo_url: processedUrls[0] || null,
-      photos: processedUrls,
+      photo_url: finalPhotos[0] || null,
+      photos: finalPhotos,
       photo_processing_status: 'done',
       photo_processed_at: new Date().toISOString(),
       photo_processing_error: null,
