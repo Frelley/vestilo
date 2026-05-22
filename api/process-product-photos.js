@@ -3,12 +3,12 @@ import { rateLimit } from './_rateLimit.js'
 export const maxDuration = 300
 
 const BUCKET = 'product-photos'
-const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1-mini'
+const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
 const IMAGE_SIZE = process.env.OPENAI_IMAGE_SIZE || '1024x1536'
 const IMAGE_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'medium'
 const OUTPUT_FORMAT = process.env.OPENAI_IMAGE_OUTPUT_FORMAT || 'jpeg'
 const OUTPUT_COMPRESSION = Number(process.env.OPENAI_IMAGE_OUTPUT_COMPRESSION || 86)
-const MAX_PROCESSED_PHOTOS = 2
+const MAX_PROCESSED_PHOTOS = 1
 
 const EDIT_PROMPT = `Edit this product photo for mobile ecommerce.
 Only clean the background and the product boundary.
