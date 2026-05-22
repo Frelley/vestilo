@@ -2,6 +2,7 @@
 
 | Version | Changes |
 |---|---|
+| v7.2 | Switched ecommerce photo cleanup to the budget image model while keeping strict background/edge-only prompt constraints. |
 | v7.1 | Reverted photo cleanup to high-fidelity background/edge-only edits to prevent product, mannequin, and logo hallucination. |
 | v7.0 | Locked ecommerce photo cleanup to the budget model with medium quality and lighter ironing that preserves natural fabric texture. |
 | v6.9 | Limited ecommerce photo cleanup to the first two product photos so front/back are processed while extra detail photos stay unchanged. |
