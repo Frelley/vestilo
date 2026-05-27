@@ -1,5 +1,17 @@
 # Vestilo a tu sonso — Project Map
 
+## Definition of Done
+First paid sales coming through the live store AND the marketing artifacts (ad creative, content, store polish) are portfolio-grade enough to showcase as Fiverr-sellable marketing work.
+
+## Current Milestone
+Run `sql/photo_processing.sql`, configure `OPENAI_API_KEY` in Vercel, test one product photo cleanup end-to-end — then start the next marketing artifact as a doubled-purpose portfolio piece.
+
+## Ladders to
+First income (short-term goal in `C:\dev\RichardBot\context\goals.md`)
+
+## Deadline
+None
+
 ## Phases
 | Phase | Goal | Done? |
 |-------|------|-------|
@@ -18,7 +30,7 @@ Current phase: 2
 - WA: 59175506716
 - Vercel: vestilo | GitHub: https://github.com/Frelley/vestilo (public)
 
-## Version: v7.3 (next: v7.4)
+## Version: v7.4 (next: v7.5)
 
 ## Stack
 React 18 + Vite + Supabase + Vercel. Top-level imports only, no require(). Pure JS changes → edit on GitHub, Vercel auto-deploys in ~2 min. package.json changes → full rebuild.
