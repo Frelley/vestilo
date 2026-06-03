@@ -2,6 +2,8 @@
 
 | Version | Changes |
 |---|---|
+| v7.6 | Atelier visual redesign (storefront pass): new Bodoni Moda + Hanken Grotesk type system, warm paper palette, unified single light theme (Swipe deck no longer dark), custom SVG icon set replacing emoji, restyled catalogue grid, product detail, swipe deck, and lista de compra. Admin/Upload/Login restyle pending. |
+| v7.4 | Auto-started ecommerce background cleanup for new uploads and moved first-photo cleanup onto OpenAI Batch API with polling finalization. |
 | v7.3 | Restored high-fidelity image model and limited default background cleanup to the first photo to reduce per-product cost without sacrificing product accuracy. |
 | v7.2 | Switched ecommerce photo cleanup to the budget image model while keeping strict background/edge-only prompt constraints. |
 | v7.1 | Reverted photo cleanup to high-fidelity background/edge-only edits to prevent product, mannequin, and logo hallucination. |

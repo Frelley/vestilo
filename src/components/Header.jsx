@@ -12,54 +12,30 @@ export default function Header({ admin = false }) {
   }
 
   return (
-    <header style={{
-      background: '#1a1209',
-      padding: '0 20px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      height: 56,
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-    }}>
-      <Link to="/" style={{ textDecoration: 'none' }}>
-        <div style={{ fontFamily: "'Nunito', sans-serif", color: '#c8622e', fontSize: 18, fontWeight: 800, letterSpacing: 0.5 }}>
-          Vestilo a tu sonso!
-        </div>
-        <div style={{ color: '#9e8a6a', fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', marginTop: -2 }}>
-          Santa Cruz · Bolivia
-        </div>
-      </Link>
+    <header className="v-top">
+      <div className="v-top-in">
+        <Link to="/" className="v-wm">
+          <div className="v-wm-name">Vestilo <em>a tu sonso</em></div>
+          <div className="v-wm-sub">Santa Cruz · Bolivia</div>
+        </Link>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        {session ? (
-          <>
-            {!admin && (
-              <Link to="/admin" style={{ color: '#9e8a6a', fontSize: 12, textDecoration: 'none' }}>
-                Admin
-              </Link>
-            )}
-            {admin && (
-              <Link to="/admin/upload" style={{
-                background: '#f5e6c8', color: '#1a1209', padding: '6px 12px',
-                borderRadius: 6, fontSize: 12, fontWeight: 600, textDecoration: 'none'
-              }}>
-                + Agregar
-              </Link>
-            )}
-            <button onClick={handleSignOut} style={{
-              background: 'transparent', border: '1px solid #3d3020', color: '#9e8a6a',
-              padding: '5px 10px', borderRadius: 6, fontSize: 12
-            }}>
-              Salir
-            </button>
-          </>
-        ) : (
-          <Link to="/admin/login" style={{ color: '#9e8a6a', fontSize: 12, textDecoration: 'none' }}>
-            Admin
-          </Link>
-        )}
+        <div className="v-top-actions">
+          {session ? (
+            <>
+              {!admin && (
+                <Link to="/admin" className="v-admin-link">Admin</Link>
+              )}
+              {admin && (
+                <Link to="/admin/upload" className="v-search-btn" style={{ padding: '9px 15px', borderRadius: 2 }}>
+                  + Agregar
+                </Link>
+              )}
+              <button onClick={handleSignOut} className="v-btn-ghost">Salir</button>
+            </>
+          ) : (
+            <Link to="/admin/login" className="v-admin-link">Admin</Link>
+          )}
+        </div>
       </div>
     </header>
   )

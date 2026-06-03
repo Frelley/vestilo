@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getPhotos } from '../lib/catalogueHelpers.js'
-import CartHeart from './CartHeart.jsx'
 import PromoBanner from './PromoBanner.jsx'
 import LikedList from './LikedList.jsx'
+import { Heart, Filter, SwipeIco, MapPin, Placeholder } from './AtelierIcons.jsx'
+import { StatusBadge, ColorDots } from './AtelierBits.jsx'
+import { colorsArray } from '../lib/constants.js'
 
-export default function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked, showFilters, setShowFilters, hasFilter }) {
+export default function GridView({ products, likedIds, onToggleLike, onSwitchMode, filterBar, likedProducts, onRemoveLiked, setShowFilters, hasFilter }) {
   const navigate   = useNavigate()
   const [showLiked, setShowLiked] = useState(false)
   const likedCount = likedProducts.length
@@ -19,63 +21,79 @@ export default function GridView({ products, likedIds, onToggleLike, onSwitchMod
   if (showLiked) return <LikedList likedProducts={likedProducts} onBack={() => setShowLiked(false)} onRemove={onRemoveLiked} />
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#1a1209', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div>
-          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 16, fontWeight: 800, color: '#c8622e' }}>Vestilo a tu sonso!</div>
-          <div style={{ fontSize: 10, color: '#9e8a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Santa Cruz · Bolivia</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => setShowFilters(f => !f)} style={{ background: hasFilter ? '#c8622e' : 'transparent', color: hasFilter ? '#fff' : '#9e8a6a', border: `1px solid ${hasFilter ? '#c8622e' : '#3d3020'}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            {hasFilter && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block' }} />}
-            Filtros
-          </button>
-          <button onClick={onSwitchMode} style={{ background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', fontSize: 11, color: '#9e8a6a', cursor: 'pointer' }}>Swipe</button>
-          <button onClick={() => setShowLiked(true)} style={{ position: 'relative', background: 'transparent', border: '1px solid #3d3020', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <CartHeart liked={likedCount > 0} size={18} color="#9e8a6a" />
-            {likedCount > 0 && <span style={{ background: '#c8622e', color: '#fff', borderRadius: 99, fontSize: 11, fontWeight: 700, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{likedCount}</span>}
-          </button>
-        </div>
-      </div>
-      <PromoBanner />
-      {filterBar}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 12 }}>
-        {products.map((p, pi) => {
-          const photo = getPhotos(p)[0]
-          const liked = likedIds.includes(p.id)
-          return (
-            <div key={p.id} className="product-card">
-              <div onClick={() => { sessionStorage.setItem('vestilo-scroll', String(window.scrollY)); navigate(`/p/${p.id}`) }} style={{ cursor: 'pointer' }}>
-                {photo
-                  ? <img src={photo} alt={p.name} style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ aspectRatio: '3/4', background: '#f0ede8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>👕</div>}
-                <div style={{ padding: '8px 10px 10px' }}>
-                  <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: 700, color: '#1a1209', marginBottom: 2 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#7a6651' }}>Talla {p.size}</div>
-                  <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 14, fontWeight: 700, color: '#1a1209', marginTop: 4 }}>Bs. {p.price}</div>
-                </div>
-              </div>
-              <button onClick={() => onToggleLike(p)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)', color: liked ? '#ef5350' : '#f5e6c8' }}>
-                <CartHeart liked={liked} size={18} />
-              </button>
-            </div>
-          )
-        })}
-        {products.length === 0 && (
-          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 60, color: '#9e8a6a' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>👕</div>
-            <div style={{ fontFamily: "'Nunito', sans-serif", color: '#1a1209', fontSize: 16 }}>No hay prendas disponibles</div>
+    <div className="v-app">
+      <header className="v-top">
+        <div className="v-top-in">
+          <Link to="/" className="v-wm">
+            <div className="v-wm-name">Vestilo <em>a tu sonso</em></div>
+            <div className="v-wm-sub">Santa Cruz · Bolivia</div>
+          </Link>
+          <div className="v-top-actions">
+            <Link to="/admin" className="v-admin-link">Admin</Link>
+            <button className={'v-ibtn' + (hasFilter ? ' on' : '')} onClick={() => setShowFilters(f => !f)} title="Filtros">
+              <Filter size={17} />
+              {hasFilter && <span className="v-ibtn-dot" />}
+            </button>
+            <button className="v-ibtn" onClick={onSwitchMode} title="Cambiar vista">
+              <SwipeIco size={17} />
+              <span className="v-mode-label">Swipe</span>
+            </button>
+            <button className="v-ibtn" onClick={() => setShowLiked(true)} title="Lista de compra">
+              <Heart size={17} filled={likedCount > 0} />
+              {likedCount > 0 && <span className="v-badge">{likedCount}</span>}
+            </button>
           </div>
-        )}
+        </div>
+      </header>
+
+      <div className="v-sub">
+        {filterBar}
+        <PromoBanner />
       </div>
 
-      {/* Location / Pickup */}
-      <div style={{ textAlign: 'center', padding: '20px 16px 40px', borderTop: '1px solid #e8e0d4', marginTop: 4 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0ede8', borderRadius: 20, padding: '7px 16px', border: '1px solid #e8e0d4' }}>
-          <span style={{ fontSize: 14 }}>📍</span>
-          <span style={{ fontSize: 12, color: '#3d3020', fontWeight: 600 }}>Centro, calle Charcas · Santa Cruz</span>
-        </div>
-        <div style={{ fontSize: 11, color: '#7a6651', marginTop: 8 }}>Retiro en ~1h · Lun–Sáb 10–18h · Envíos disponibles en Santa Cruz</div>
+      <div className="v-loc">
+        <MapPin size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        <span><b>Centro, calle Charcas</b> · Retiro en ~1h · Lun–Sáb 10–18h · Envíos en Santa Cruz</span>
+      </div>
+
+      <div className="v-cat">
+        {products.length === 0 ? (
+          <div className="v-empty">
+            <div className="v-empty-title">No hay prendas con esos filtros</div>
+            <div className="v-empty-sub">Probá quitar algún filtro o limpiar la búsqueda.</div>
+          </div>
+        ) : (
+          <div className="v-grid">
+            {products.map((p) => {
+              const photo = getPhotos(p)[0]
+              const liked = likedIds.includes(p.id)
+              const colors = colorsArray(p.color)
+              const open = () => { sessionStorage.setItem('vestilo-scroll', String(window.scrollY)); navigate(`/p/${p.id}`) }
+              return (
+                <article key={p.id} className="v-card">
+                  <div className="v-card-ph" onClick={open}>
+                    {photo
+                      ? <img src={photo} alt={p.name} />
+                      : <Placeholder />}
+                    <StatusBadge status={p.status} />
+                    <button className={'v-card-heart' + (liked ? ' on' : '')}
+                      onClick={e => { e.stopPropagation(); onToggleLike(p) }}>
+                      <Heart size={17} filled={liked} />
+                    </button>
+                  </div>
+                  <div className="v-card-body" onClick={open}>
+                    <h3 className="v-card-name">{p.name}</h3>
+                    <div className="v-card-meta">
+                      <ColorDots color={p.color} />
+                      <span>Talla {p.size}{colors.length ? ` · ${colors.join(', ')}` : ''}</span>
+                    </div>
+                    <div className="v-price">Bs. {p.price}</div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

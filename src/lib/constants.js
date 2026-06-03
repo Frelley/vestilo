@@ -20,6 +20,14 @@ export const STATUS_STYLES = {
   Archivado:  { bg: '#f0ede8', color: '#9e8a6a' },
 }
 
+// Atelier — single-tone status (text + dot), one job each
+export const STATUS_TONES = {
+  Disponible: '#3E6B45',
+  Reservado:  '#B25A1D',
+  Vendido:    '#8C8C8C',
+  Archivado:  '#9A8E78',
+}
+
 export function daysSince(dateStr) {
   if (!dateStr) return 0
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)

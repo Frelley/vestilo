@@ -9,6 +9,7 @@ import {
 import GridView from '../components/GridView.jsx'
 import SwipeView from '../components/SwipeView.jsx'
 import FilterPanel from '../components/FilterPanel.jsx'
+import { Search, Close } from '../components/AtelierIcons.jsx'
 
 export default function Catalogue() {
   const [mode, setMode]           = useState(getDefaultMode)
@@ -100,52 +101,48 @@ export default function Catalogue() {
   function clearSearch() { setSearchQuery(''); setSearchIds(null) }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: 32, height: 32, border: '2px solid #3d3020', borderTopColor: '#f5e6c8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    <div style={{ minHeight: '100vh', background: 'var(--paper)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="spinner" style={{ width: 32, height: 32 }} />
     </div>
   )
 
   if (loadError) return (
-    <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
-      <div style={{ fontFamily: "'Nunito', sans-serif", color: '#f5e6c8', fontSize: 20, fontWeight: 800, marginBottom: 8 }}>No se pudo cargar el catálogo</div>
-      <div style={{ color: '#9e8a6a', fontSize: 13, marginBottom: 24 }}>Revisá tu conexión e intentá de nuevo</div>
-      <button onClick={load} style={{ background: '#c8622e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Reintentar</button>
+    <div style={{ minHeight: '100vh', background: 'var(--paper)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+      <div style={{ fontFamily: 'var(--serif)', color: 'var(--ink)', fontSize: 22, fontWeight: 500, marginBottom: 8 }}>No se pudo cargar el catálogo</div>
+      <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 24 }}>Revisá tu conexión e intentá de nuevo</div>
+      <button onClick={load} className="v-search-btn" style={{ padding: '11px 22px' }}>Reintentar</button>
     </div>
   )
 
-  const searchBar = (isDark) => (
-    <div style={{ padding: '6px 12px 2px' }}>
-      <form onSubmit={e => { e.preventDefault(); doSearch(searchQuery) }} style={{ display: 'flex', gap: 6 }}>
-        <div style={{ flex: 1, position: 'relative' }}>
+  const searchBar = (
+    <div className="v-search-wrap">
+      <form className="v-search" onSubmit={e => { e.preventDefault(); doSearch(searchQuery) }}>
+        <div className="v-search-field">
+          <Search size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
           <input
+            className="v-search-input"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            placeholder=""
-            style={{ width: '100%', background: isDark ? '#241810' : '#fff', color: isDark ? '#f5e6c8' : '#1a1209', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }}
           />
           {!searchQuery && !searchFocused && (
-            <div key={suggIdx} className="search-suggestion" style={{ color: isDark ? '#9e8a6a' : '#7a6651' }}>
-              <span style={{ color: isDark ? '#9e8a6a' : '#9e8a6a' }}>Buscar con IA… </span>
-              <span>ej: {SEARCH_SUGGESTIONS[suggIdx]}</span>
+            <div key={suggIdx} className="v-search-ghost">
+              Buscar con IA… <span className="v-search-eg">ej: {SEARCH_SUGGESTIONS[suggIdx]}</span>
             </div>
           )}
         </div>
-        <button type="submit" disabled={isSearching || !searchQuery.trim()} style={{ background: isDark ? '#f5e6c8' : '#1a1209', color: isDark ? '#1a1209' : '#f5e6c8', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer', opacity: (!searchQuery.trim() || isSearching) ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+        <button type="submit" className="v-search-btn" disabled={isSearching || !searchQuery.trim()}>
           {isSearching ? '…' : 'Buscar'}
         </button>
         {searchIds !== null && (
-          <button type="button" onClick={clearSearch} style={{ background: 'transparent', color: isDark ? '#9e8a6a' : '#7a6651', border: `1px solid ${isDark ? '#3d3020' : '#e8e0d4'}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            ✕
-          </button>
+          <button type="button" className="v-search-clear" onClick={clearSearch}><Close size={15} /></button>
         )}
       </form>
       {searchIds !== null && (
-        <div style={{ fontSize: 11, color: isDark ? '#9e8a6a' : '#7a6651', padding: '4px 4px 2px' }}>
+        <div className="v-search-meta">
           {queue.length === 0
-            ? <span>Sin resultados · <button type="button" onClick={clearSearch} style={{ background: 'none', border: 'none', color: isDark ? '#9e8a6a' : '#7a6651', textDecoration: 'underline', cursor: 'pointer', fontSize: 11, padding: 0 }}>Limpiar búsqueda</button></span>
+            ? <span>Sin resultados · <button type="button" className="v-link" onClick={clearSearch}>limpiar búsqueda</button></span>
             : `${queue.length} resultado${queue.length !== 1 ? 's' : ''}`}
         </div>
       )}
@@ -154,7 +151,7 @@ export default function Catalogue() {
 
   const filterBar = (
     <>
-      {searchBar(false)}
+      {searchBar}
       {showFilters && (
         <FilterPanel
           filterSize={filterSize} setFilterSize={setFilterSize}
@@ -183,7 +180,7 @@ export default function Catalogue() {
       likedProducts={likedProducts}
       onRemoveLiked={removeLiked}
       onSwitchMode={switchMode}
-      searchBar={searchBar(true)}
+      searchBar={searchBar}
       showFilters={showFilters} setShowFilters={setShowFilters} hasFilter={hasFilter}
       filterSize={filterSize} setFilterSize={setFilterSize}
       priceMax={priceMax} setPriceMax={setPriceMax} maxPrice={maxPrice}
