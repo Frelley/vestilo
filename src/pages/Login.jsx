@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { signIn } from '../lib/supabase.js'
 
 export default function Login() {
@@ -23,44 +23,36 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1209', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: '100%', maxWidth: 360 }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", color: '#f5e6c8', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
-            Vestilo a tu sonso!
-          </h1>
-          <p style={{ color: '#9e8a6a', fontSize: 12, letterSpacing: 2, textTransform: 'uppercase' }}>
-            Panel de administración
-          </p>
+    <div className="va-login">
+      <div className="va-login-box">
+        <div className="va-login-head">
+          <div className="va-login-wm">Vestilo <em>a tu sonso</em></div>
+          <div className="va-login-sub">Panel de administración</div>
         </div>
 
-        <div className="card" style={{ padding: 24 }}>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={{ fontSize: 12, color: '#9e8a6a', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 }}>
-                Email
-              </label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+        <form className="va-login-card" onSubmit={handleSubmit}>
+          <div className="va-field">
+            <label>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" placeholder="hola@vestilo.bo" />
+          </div>
+
+          <div className="va-field">
+            <label>Contraseña</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" placeholder="••••••••" />
+          </div>
+
+          {error && (
+            <div style={{ background: 'rgba(178,58,46,.08)', color: '#B23A2E', padding: '8px 12px', borderRadius: 2, fontSize: 13, border: '1px solid rgba(178,58,46,.25)' }}>
+              {error}
             </div>
+          )}
 
-            <div>
-              <label style={{ fontSize: 12, color: '#9e8a6a', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 }}>
-                Contraseña
-              </label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
-            </div>
+          <button type="submit" className="va-btn-dark" disabled={loading}>
+            {loading ? 'Ingresando…' : 'Ingresar'}
+          </button>
+        </form>
 
-            {error && (
-              <div style={{ background: '#ffebee', color: '#c62828', padding: '8px 12px', borderRadius: 6, fontSize: 13 }}>
-                {error}
-              </div>
-            )}
-
-            <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 4 }}>
-              {loading ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Ingresar'}
-            </button>
-          </form>
-        </div>
+        <Link to="/" className="va-login-back">← Volver a la tienda</Link>
       </div>
     </div>
   )

@@ -11,6 +11,30 @@ function getLastBundle() { try { return localStorage.getItem(LAST_BUNDLE_KEY) ||
 function saveLastBundle(id) { try { if (id) localStorage.setItem(LAST_BUNDLE_KEY, id) } catch {} }
 const EMPTY = () => ({ name: '', size: '', color: [], price: '35', notes: '', bundle_id: getLastBundle(), bundle_label: '' })
 
+async function triggerPhotoCleanup(productId) {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData?.session?.access_token
+  if (!token) return
+
+  const request = (action) => fetch('/api/process-product-photos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ product_id: productId, action, force: action === 'process' }),
+  })
+
+  await request('process')
+
+  for (let i = 0; i < 12; i++) {
+    await new Promise(resolve => setTimeout(resolve, 30_000))
+    const res = await request('poll')
+    const data = await res.json().catch(() => null)
+    if (!data?.pending) return
+  }
+}
+
 export default function Upload() {
   const { id }     = useParams()
   const navigate   = useNavigate()
@@ -149,17 +173,21 @@ export default function Upload() {
         })
       )
       const hasNewPhotos = photos.some(p => !p.existing_url)
+      const hasNewFirstPhoto = !!uploadedUrls[0] && !!photos[0]?.file
 
       const photo_url = uploadedUrls[0] || null
       const photoData = {
         photo_url,
         photos: uploadedUrls,
-        ...(hasNewPhotos ? {
-          original_photos: uploadedUrls,
+        ...(hasNewPhotos ? { original_photos: uploadedUrls } : {}),
+        ...(hasNewFirstPhoto ? {
           photo_processing_status: 'pending',
           photo_processed_at: null,
           photo_processing_error: null,
           photo_processing_model: null,
+          photo_processing_batch_id: null,
+          photo_processing_input_file_id: null,
+          photo_processing_output_file_id: null,
         } : {}),
       }
 
@@ -178,6 +206,7 @@ export default function Upload() {
             body: JSON.stringify({ product_id: id, photo_urls: uploadedUrls.filter(Boolean) })
           }).catch(() => {})
         }
+        if (hasNewFirstPhoto) triggerPhotoCleanup(id).catch(() => {})
       } else {
         const { data: newProduct, error } = await addProduct({
           ...form, price: parseFloat(form.price), status: 'Disponible',
@@ -195,6 +224,9 @@ export default function Upload() {
           photo_processed_at: null,
           photo_processing_error: null,
           photo_processing_model: null,
+          photo_processing_batch_id: null,
+          photo_processing_input_file_id: null,
+          photo_processing_output_file_id: null,
         })
         show('Producto guardado')
         if (finalUrls[0]) {
@@ -204,6 +236,7 @@ export default function Upload() {
             body: JSON.stringify({ product_id: newProduct.id, photo_urls: finalUrls.filter(Boolean) })
           }).catch(() => {})
         }
+        if (finalUrls[0]) triggerPhotoCleanup(newProduct.id).catch(() => {})
       }
       setTimeout(() => navigate('/admin'), 800)
     } catch (err) {
@@ -236,172 +269,134 @@ export default function Upload() {
   const selectedBundle = bundles.find(b => b.id === form.bundle_id)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--paper)' }}>
       <Header admin />
       <Toast toast={toast} />
 
-      <div style={{ maxWidth: 560, margin: '0 auto', padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Link to="/admin" style={{ fontSize: 13, color: '#9e8a6a', textDecoration: 'none' }}>← Volver</Link>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18 }}>
-            {isEdit ? 'Editar producto' : 'Nuevo producto'}
-          </h2>
-          {isEdit && (
-            <button onClick={handleDelete} style={{ fontSize: 12, color: '#c62828', background: 'transparent', border: 'none', cursor: 'pointer' }}>
-              Eliminar
-            </button>
-          )}
+      <div className="va-upload">
+        <div className="va-up-head">
+          <Link to="/admin" className="v-back">← Volver</Link>
+          <h2 className="va-up-title">{isEdit ? 'Editar prenda' : 'Nueva prenda'}</h2>
+          {isEdit
+            ? <button onClick={handleDelete} style={{ fontSize: 12, color: '#B23A2E', background: 'transparent', border: 'none', cursor: 'pointer' }}>Eliminar</button>
+            : <span style={{ width: 48 }} />}
         </div>
 
         {/* Photo section */}
-        <div className="card" style={{ marginBottom: 12 }}>
+        <div className="va-up-card">
           {mainPhoto ? (
-            <img src={mainPhoto} alt="preview"
-              style={{ width: '100%', maxHeight: 300, objectFit: 'cover', display: 'block' }} />
+            <div className="va-up-photo"><img src={mainPhoto} alt="preview" /></div>
           ) : (
-            <div style={{ height: 180, background: '#f0ede8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <div style={{ fontSize: 36 }}>📸</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: '#9e8a6a' }}>Agrega fotos del producto</div>
-              <div style={{ fontSize: 12, color: '#c4b9a8' }}>Hasta {MAX_PHOTOS} fotos · JPG, PNG</div>
+            <div className="va-up-empty">
+              <div className="va-up-empty-t">Agregá fotos de la prenda</div>
+              <div className="va-up-empty-s">Hasta {MAX_PHOTOS} fotos · JPG, PNG</div>
             </div>
           )}
 
-          <div style={{ padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="va-up-thumbs">
             {photos.map((p, i) => (
-              <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
-                <img
-                  src={p.preview}
-                  onClick={() => setActivePhoto(i)}
-                  style={{
-                    width: 56, height: 56, objectFit: 'cover', borderRadius: 6, cursor: 'pointer',
-                    border: i === activePhoto ? '2px solid #1a1209' : '2px solid transparent',
-                    opacity: i === activePhoto ? 1 : 0.7
-                  }}
-                />
-                <button onClick={() => removePhoto(i)} style={{
-                  position: 'absolute', top: -6, right: -6, width: 18, height: 18,
-                  borderRadius: '50%', background: '#c62828', color: '#fff', border: 'none',
-                  fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>✕</button>
-                {i > 0 && (
-                  <button onClick={() => movePhoto(i, i - 1)} style={{
-                    position: 'absolute', bottom: -6, left: -6, width: 18, height: 18,
-                    borderRadius: '50%', background: '#1a1209', color: '#f5e6c8', border: 'none',
-                    fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>←</button>
-                )}
+              <div key={i} className="va-up-thumb-wrap">
+                <img src={p.preview} onClick={() => setActivePhoto(i)}
+                  className={'va-up-thumb' + (i === activePhoto ? ' on' : '')} />
+                <button onClick={() => removePhoto(i)} className="va-up-thumb-x">✕</button>
+                {i > 0 && <button onClick={() => movePhoto(i, i - 1)} className="va-up-thumb-mv">←</button>}
               </div>
             ))}
 
             {photos.length < MAX_PHOTOS && (
-              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                {/* Camera — opens rear camera directly on both iOS and Android */}
-                <label style={{
-                  width: 56, height: 56, borderRadius: 6, border: '1.5px dashed #c4b9a8',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', background: '#faf8f5', gap: 2
-                }}>
-                  <span style={{ fontSize: 16, color: '#9e8a6a' }}>📷</span>
-                  <span style={{ fontSize: 8, color: '#c4b9a8' }}>Cámara</span>
+              <>
+                {/* Camera — opens rear camera directly on iOS and Android */}
+                <label className="va-up-add">
+                  <span style={{ fontSize: 16, color: 'var(--muted)' }}>📷</span>
+                  <span className="va-up-add-c">Cámara</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handlePhotoAdd} style={{ display: 'none' }} />
                 </label>
-                {/* Gallery — opens file picker / gallery */}
-                <label style={{
-                  width: 56, height: 56, borderRadius: 6, border: '1.5px dashed #c4b9a8',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', background: '#faf8f5', gap: 2
-                }}>
-                  <span style={{ fontSize: 16, color: '#9e8a6a' }}>🖼️</span>
-                  <span style={{ fontSize: 8, color: '#c4b9a8' }}>{photos.length}/{MAX_PHOTOS}</span>
+                {/* Gallery — file picker */}
+                <label className="va-up-add">
+                  <span style={{ fontSize: 16, color: 'var(--muted)' }}>＋</span>
+                  <span className="va-up-add-c">{photos.length}/{MAX_PHOTOS}</span>
                   <input type="file" accept="image/*" multiple onChange={handlePhotoAdd} style={{ display: 'none' }} />
                 </label>
-              </div>
+              </>
             )}
           </div>
 
           {photos.length > 0 && (
-            <div style={{ padding: '0 12px 10px', fontSize: 11, color: '#9e8a6a' }}>
-              La primera foto aparece en el catálogo. Usa ← para reordenar.
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+              La primera foto aparece en el catálogo. Usá ← para reordenar.
             </div>
           )}
         </div>
 
         {/* Basic info */}
-        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={lblStyle}>Talla *</label>
-                <select value={form.size} onChange={e => handleSizeChange(e.target.value)}>
-                  <option value="">Seleccionar...</option>
-                  {SIZES.map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={lblStyle}>Precio (Bs.) *</label>
-                <input type="number" placeholder="120" value={form.price}
-                  onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                  onBlur={handlePriceBlur} />
-              </div>
+        <div className="va-up-card">
+          <div className="va-up-grid2">
+            <div className="va-field">
+              <label>Talla *</label>
+              <select value={form.size} onChange={e => handleSizeChange(e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {SIZES.map(s => <option key={s}>{s}</option>)}
+              </select>
             </div>
+            <div className="va-field">
+              <label>Precio (Bs.) *</label>
+              <input type="number" placeholder="120" value={form.price}
+                onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                onBlur={handlePriceBlur} />
+            </div>
+          </div>
 
-            <div>
-              <label style={lblStyle}>
-                Nombre / etiqueta *
-                {!isEdit && form.size && <span style={{ marginLeft: 6, color: '#c4b9a8', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>auto-generado</span>}
-              </label>
-              <input placeholder="Ej: M-001" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
+          <div className="va-field">
+            <label>
+              Nombre / etiqueta *
+              {!isEdit && form.size && <span className="va-auto"> · auto-generado</span>}
+            </label>
+            <input placeholder="Ej: M-001" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          </div>
 
-            <div>
-              <label style={lblStyle}>Notas internas</label>
-              <textarea placeholder="Notas sobre el producto (solo visible para el equipo)..."
-                value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                rows={2} style={{ resize: 'vertical' }} />
-            </div>
+          <div className="va-field">
+            <label>Notas internas</label>
+            <textarea placeholder="Notas sobre la prenda (solo visible para el equipo)..."
+              value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              rows={2} style={{ resize: 'vertical' }} />
           </div>
         </div>
 
         {/* Bundle assignment */}
-        <div className="card" style={{ padding: 16, marginBottom: 12 }}>
-          <label style={lblStyle}>Lote de inventario</label>
-          {bundles.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#9e8a6a', padding: '8px 0' }}>
-              No hay lotes activos. <Link to="/admin" style={{ color: '#1a1209' }}>Crea uno en la pestaña Lotes →</Link>
-            </div>
-          ) : (
-            <select value={form.bundle_id} onChange={e => handleBundleChange(e.target.value)}>
-              <option value="">Sin asignar a lote</option>
-              {bundles.map(b => (
-                <option key={b.id} value={b.id}>{b.name} — Bs. {b.cost_per_unit}/u</option>
-              ))}
-            </select>
-          )}
-
+        <div className="va-up-card">
+          <div className="va-field">
+            <label>Lote de inventario</label>
+            {bundles.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--muted)', padding: '4px 0' }}>
+                No hay lotes activos. <Link to="/admin" style={{ color: 'var(--ink)' }}>Creá uno en la pestaña Lotes →</Link>
+              </div>
+            ) : (
+              <select value={form.bundle_id} onChange={e => handleBundleChange(e.target.value)}>
+                <option value="">Sin asignar a lote</option>
+                {bundles.map(b => (
+                  <option key={b.id} value={b.id}>{b.name} — Bs. {b.cost_per_unit}/u</option>
+                ))}
+              </select>
+            )}
+          </div>
           {form.bundle_id && selectedBundle && (
-            <div style={{ marginTop: 10, fontSize: 11, color: '#9e8a6a' }}>
-              Costo del lote: <strong style={{ color: '#1a1209' }}>Bs. {selectedBundle.cost_per_unit}</strong> por prenda · {selectedBundle.units_remaining ?? '—'} disponibles
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+              Costo del lote: <strong style={{ color: 'var(--ink)' }}>Bs. {selectedBundle.cost_per_unit}</strong> por prenda · {selectedBundle.units_remaining ?? '—'} disponibles
             </div>
           )}
         </div>
 
         {/* Color */}
-        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <label style={lblStyle}>
+        <div className="va-up-card">
+          <div className="va-field-label">
             Color *{detectingColors
-              ? <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}> — detectando...</span>
-              : form.color.length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, color: '#c4b9a8', fontStyle: 'italic' }}> — {form.color.join(', ')}</span>
-            }
-          </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              ? <span className="va-auto"> · detectando...</span>
+              : form.color.length > 0 && <span className="va-auto"> · {form.color.join(', ')}</span>}
+          </div>
+          <div className="va-color-grid">
             {COLORS.map(c => (
               <button key={c} type="button" onClick={() => toggleColor(c)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 99,
-                  border: form.color.includes(c) ? '2px solid #1a1209' : '1px solid #e8e0d4',
-                  background: form.color.includes(c) ? '#1a1209' : 'transparent',
-                  color: form.color.includes(c) ? '#f5e6c8' : '#9e8a6a', fontSize: 12, cursor: 'pointer'
-                }}>
+                className={'va-color' + (form.color.includes(c) ? ' on' : '')}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLOR_DOTS[c] || '#ccc', border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
                 {c}
               </button>
@@ -410,19 +405,14 @@ export default function Upload() {
         </div>
 
         {/* Save */}
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving}
-          style={{ width: '100%', padding: 14, fontSize: 15 }}>
+        <button className="va-btn-dark" onClick={handleSave} disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {saving
-            ? <span className="spinner" style={{ width: 18, height: 18, borderTopColor: '#f5e6c8' }} />
-            : isEdit ? 'Guardar cambios' : 'Guardar producto →'
+            ? <span className="spinner" style={{ width: 18, height: 18, borderTopColor: 'var(--paper)' }} />
+            : isEdit ? 'Guardar cambios' : 'Guardar prenda →'
           }
         </button>
       </div>
     </div>
   )
-}
-
-const lblStyle = {
-  fontSize: 11, color: '#9e8a6a', display: 'block',
-  marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1
 }

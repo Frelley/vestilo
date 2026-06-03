@@ -41,7 +41,7 @@ function needsPhotoProcessing(product) {
 }
 
 function photoProcessingLabel(product) {
-  if (product.photo_processing_status === 'processing') return 'Procesando'
+  if (product.photo_processing_status === 'processing') return 'Batch'
   if (product.photo_processing_status === 'done') return 'Rehacer'
   if (product.photo_processing_status === 'failed') return 'Reintentar'
   return 'Fondo'
@@ -588,7 +588,15 @@ export default function Admin() {
       getProducts(),
       supabase.from('swipe_stats').select('*'),
     ])
-    if (prods) setProducts(prods)
+    if (prods) {
+      setProducts(prods)
+      const processing = prods.filter(p => p.photo_processing_status === 'processing')
+      setTimeout(() => {
+        processing.slice(0, 5).forEach(p => {
+          processProductPhotos(p, { force: false, action: 'poll' }).catch(() => {})
+        })
+      }, 500)
+    }
     if (swipes) {
       const map = {}
       swipes.forEach(s => { map[s.product_id] = s })
@@ -670,10 +678,11 @@ export default function Admin() {
     load()
   }
 
-  async function processProductPhotos(product, { force = true } = {}) {
+  async function processProductPhotos(product, { force = true, action = null } = {}) {
     const { data: sessionData } = await supabase.auth.getSession()
     const token = sessionData?.session?.access_token
     if (!token) throw new Error('Sesion admin expirada')
+    const nextAction = action || (product.photo_processing_status === 'processing' && !force ? 'poll' : 'process')
 
     setProcessingPhotoIds(prev => ({ ...prev, [product.id]: true }))
     setProducts(prev => prev.map(p => p.id === product.id ? { ...p, photo_processing_status: 'processing', photo_processing_error: null } : p))
@@ -685,14 +694,14 @@ export default function Admin() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ product_id: product.id, force }),
+        body: JSON.stringify({ product_id: product.id, action: nextAction, force }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error || 'No se pudo procesar fotos')
       if (data?.product) {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, ...data.product } : p))
       }
-      return data?.product
+      return data
     } finally {
       setProcessingPhotoIds(prev => {
         const next = { ...prev }
@@ -705,8 +714,8 @@ export default function Admin() {
   async function handleProcessProductPhotos(product) {
     if (!hasProductPhotos(product)) return
     try {
-      await processProductPhotos(product, { force: product.photo_processing_status === 'done' })
-      show('Fotos procesadas')
+      const data = await processProductPhotos(product, { force: product.photo_processing_status === 'done' })
+      show(data?.pending ? 'Batch de fondo en proceso' : 'Fotos procesadas')
     } catch (err) {
       show(err.message || 'Error procesando fotos', 'error')
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, photo_processing_status: 'failed', photo_processing_error: err.message } : p))
@@ -729,11 +738,12 @@ export default function Admin() {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, photo_processing_status: 'failed', photo_processing_error: err.message } : p))
       }
       setPhotoProgress({ done: i + 1, total: pending.length })
+      if (i < pending.length - 1) await new Promise(r => setTimeout(r, 500))
     }
 
     setPhotoProcessing(false)
     setPhotoProgress(null)
-    show(failed.length ? `Fotos procesadas con ${failed.length} error(es)` : `Fotos procesadas para ${pending.length} producto${pending.length !== 1 ? 's' : ''}`)
+    show(failed.length ? `Fotos con ${failed.length} error(es)` : `Batch iniciado para ${pending.length} producto${pending.length !== 1 ? 's' : ''}`)
     if (failed.length) console.warn('Photo processing failures:', failed)
     load()
   }
@@ -828,35 +838,35 @@ export default function Admin() {
   })
 
   const tabStyle = t => ({
-    padding: '8px 14px', background: 'transparent',
-    border: 'none', borderBottom: activeTab === t ? '2px solid #1a1209' : '2px solid transparent',
-    fontSize: 13, cursor: 'pointer', color: activeTab === t ? '#1a1209' : '#9e8a6a',
-    fontWeight: activeTab === t ? 500 : 400, marginBottom: -1, whiteSpace: 'nowrap',
+    padding: '11px 13px', background: 'transparent',
+    border: 'none', borderBottom: activeTab === t ? '2px solid var(--accent)' : '2px solid transparent',
+    fontSize: 13, cursor: 'pointer', color: activeTab === t ? 'var(--ink)' : 'var(--muted)',
+    fontWeight: 500, marginBottom: -1, whiteSpace: 'nowrap',
   })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--paper)' }}>
       <Header admin />
       <Toast toast={toast} />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, padding: '12px 16px' }}>
         {[
-          ['Total',       summary.total,     '#1a1209'],
-          ['Disponibles', summary.available,  '#2e7d32'],
-          ['Reservados',  summary.reserved,   '#e65100'],
-          ['Vendidos',    summary.sold,       '#c62828'],
-          ['+30 días',    summary.old,        '#9e8a6a'],
+          ['Total',       summary.total,     '#15100A'],
+          ['Disponibles', summary.available,  '#3E6B45'],
+          ['Reservados',  summary.reserved,   '#B25A1D'],
+          ['Vendidos',    summary.sold,       '#B23A2E'],
+          ['+30 días',    summary.old,        '#8C7E68'],
         ].map(([label, val, color]) => (
-          <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px 10px', borderTop: `3px solid ${color}` }}>
-            <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+          <div key={label} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: '12px 13px', borderTop: `3px solid ${color}` }}>
+            <div style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 5, fontWeight: 600 }}>{label}</div>
+            <div style={{ fontFamily: 'var(--serif)', fontSize: 27, fontWeight: 500, color, lineHeight: 1 }}>{val}</div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, padding: '0 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 0, padding: '0 16px', background: 'var(--card)', borderBottom: '1px solid var(--line)', overflowX: 'auto' }}>
         {[
           ['all',      'Todos'],
           ['available','Disponibles'],
@@ -880,7 +890,7 @@ export default function Admin() {
 
       {/* Toolbar — hidden on Orders, Bundles, Searches, and Modes tabs */}
       {activeTab !== 'orders' && activeTab !== 'bundles' && activeTab !== 'marketing' && activeTab !== 'searches' && activeTab !== 'modes' && (
-        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e8e0d4', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: 'var(--card)', borderBottom: '1px solid var(--line)', flexWrap: 'wrap' }}>
           <input
             type="text"
             placeholder="Buscar por nombre, talla, etiqueta…"

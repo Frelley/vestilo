@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
-import { STATUS_STYLES, COLOR_DOTS, colorsArray, daysSince } from '../lib/constants.js'
+import { daysSince } from '../lib/constants.js'
+import { StatusBadge } from './AtelierBits.jsx'
+import { Placeholder } from './AtelierIcons.jsx'
 
-function LazyImage({ src, alt, style }) {
+function LazyImage({ src, alt }) {
   const [loaded, setLoaded] = useState(false)
   const ref = useRef(null)
 
@@ -12,107 +14,57 @@ function LazyImage({ src, alt, style }) {
     if (!el) return
     const obs = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setLoaded(true); obs.disconnect() } },
-      { rootMargin: '200%' }  // start loading 2 screens before visible
+      { rootMargin: '200%' }
     )
     obs.observe(el)
     return () => obs.disconnect()
   }, [src])
 
   return (
-    <div ref={ref} style={{ ...style, background: '#f0ede8', overflow: 'hidden' }}>
-      {loaded && (
-        <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-      )}
+    <div ref={ref} style={{ position: 'absolute', inset: 0, background: 'var(--ph)' }}>
+      {loaded && <img src={src} alt={alt} />}
     </div>
   )
 }
 
 export default function ProductCard({ product, admin = false, onStatusChange }) {
   const days = daysSince(product.created_at)
-  const ageDotColor = days > 60 ? '#c62828' : days > 30 ? '#e65100' : '#2e7d32'
-  const st = STATUS_STYLES[product.status] || STATUS_STYLES.Disponible
-  const colors = colorsArray(product.color)
+  const ageTone = days > 60 ? '#B23A2E' : days > 30 ? '#B25A1D' : '#3E6B45'
+  const to = admin ? `/admin/upload/${product.id}` : `/p/${product.id}`
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-      <Link to={admin ? `/admin/upload/${product.id}` : `/p/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-        {product.photo_url ? (
-          <LazyImage
-            src={product.photo_url}
-            alt={product.name}
-            style={{ width: '100%', height: 200 }}
-          />
-        ) : (
-          <div style={{
-            height: 200, background: '#f0ede8',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 64, color: '#c4b9a8'
-          }}>
-            👕
-          </div>
-        )}
+    <article className="va-card">
+      <Link to={to} className="va-card-ph" style={{ display: 'block' }}>
+        {product.photo_url ? <LazyImage src={product.photo_url} alt={product.name} /> : <Placeholder />}
+        <StatusBadge status={product.status} />
       </Link>
 
-      <div style={{ padding: '10px 12px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
-          <Link to={admin ? `/admin/upload/${product.id}` : `/p/${product.id}`} style={{
-            fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 700,
-            color: '#1a1209', textDecoration: 'none', lineHeight: 1.3,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-          }}>
-            {product.name}
-          </Link>
-        </div>
-
-        <div style={{ fontSize: 12, color: '#9e8a6a', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          {colors.map(c => (
-            <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: COLOR_DOTS[c] || '#ccc', border: '1px solid rgba(0,0,0,0.1)', display: 'inline-block' }} />
-          ))}
-          Talla {product.size}{colors.length > 0 ? ` · ${colors.join(', ')}` : ''}
-        </div>
-
-        <div style={{
-          fontFamily: "'Playfair Display', serif", fontSize: 16,
-          fontWeight: 700, color: '#1a1209', marginTop: 2
-        }}>
-          Bs. {product.price}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-          <span className="badge" style={{ background: st.bg, color: st.color }}>
-            {product.status}
-          </span>
+      <div className="va-card-body">
+        <div className="va-card-row">
+          <Link to={to} className="va-card-name" style={{ textDecoration: 'none' }}>{product.name}</Link>
           {admin && (
-            <span style={{ fontSize: 11, color: ageDotColor, display: 'flex', alignItems: 'center' }}>
-              <span className="age-dot" style={{ background: ageDotColor }} />
-              {days === 0 ? 'Hoy' : `${days}d`}
+            <span className="va-age" style={{ color: ageTone }}>
+              <span className="va-age-dot" style={{ background: ageTone }} />
+              {days === 0 ? 'hoy' : `${days}d`}
             </span>
           )}
         </div>
+        <div className="va-card-meta">Talla {product.size} · Bs. {product.price}</div>
 
         {admin && onStatusChange && (
-          <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+          <div className="va-quick">
             {product.status !== 'Disponible' && (
-              <button className="btn" style={{ fontSize: 11, padding: '3px 8px', color: '#2e7d32', flex: 1 }}
-                onClick={() => onStatusChange(product.id, 'Disponible')}>
-                Disponible
-              </button>
-            )}
-            {product.status !== 'Vendido' && (
-              <button className="btn" style={{ fontSize: 11, padding: '3px 8px', color: '#c62828', flex: 1 }}
-                onClick={() => onStatusChange(product.id, 'Vendido')}>
-                Vendido
-              </button>
+              <button className="va-q va-q-av" onClick={() => onStatusChange(product.id, 'Disponible')}>Disponible</button>
             )}
             {product.status !== 'Reservado' && (
-              <button className="btn" style={{ fontSize: 11, padding: '3px 8px', color: '#e65100', flex: 1 }}
-                onClick={() => onStatusChange(product.id, 'Reservado')}>
-                Reservar
-              </button>
+              <button className="va-q va-q-re" onClick={() => onStatusChange(product.id, 'Reservado')}>Reservar</button>
+            )}
+            {product.status !== 'Vendido' && (
+              <button className="va-q va-q-so" onClick={() => onStatusChange(product.id, 'Vendido')}>Vendido</button>
             )}
           </div>
         )}
       </div>
-    </div>
+    </article>
   )
 }
