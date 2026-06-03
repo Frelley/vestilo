@@ -157,6 +157,7 @@ async function drawPoster(canvas, product) {
     container.style.position = 'fixed'
     container.style.left = '-9999px'
     document.body.appendChild(container)
+    // eslint-disable-next-line no-undef
     new QRCode(container, { text: url, width: qrSize, height: qrSize, colorDark: '#f5e6c8', colorLight: bgColor })
     await new Promise(r => setTimeout(r, 200))
     const qrCanvas = container.querySelector('canvas')
@@ -226,12 +227,12 @@ export function PosterModal({ product, onClose }) {
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, backdropFilter: 'blur(3px)' }} />
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201, background: '#faf8f5', borderRadius: '18px 18px 0 0', maxHeight: '95vh', overflowY: 'auto', boxShadow: '0 -8px 32px rgba(0,0,0,0.25)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201, background: 'var(--paper)', borderRadius: '4px 4px 0 0', borderTop: '1px solid var(--line)', maxHeight: '95vh', overflowY: 'auto', boxShadow: '0 -8px 32px rgba(21,16,10,0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#c4b9a8' }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--line)' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 12px' }}>
-          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 17, fontWeight: 700, color: '#1a1209' }}>Poster para redes sociales</div>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 19, fontWeight: 500, color: 'var(--ink)' }}>Poster para redes sociales</div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 20, color: '#9e8a6a', cursor: 'pointer' }}>×</button>
         </div>
         <div style={{ padding: '0 20px 16px', display: 'flex', justifyContent: 'center' }}>

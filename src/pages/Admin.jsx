@@ -884,7 +884,7 @@ export default function Admin() {
           </button>
         ))}
         <button style={tabStyle('marketing')} onClick={() => { setActiveTab('marketing'); setFilterStatus(''); setSelectMode(false); setSelected({}) }}>
-          ðŸŽ¬ Marketing
+          🎬 Marketing
         </button>
       </div>
 

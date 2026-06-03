@@ -102,12 +102,12 @@ export function ShareModal({ product, onClose }) {
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, backdropFilter: 'blur(2px)' }} />
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201, background: '#faf8f5', borderRadius: '18px 18px 0 0', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 -8px 32px rgba(0,0,0,0.18)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201, background: 'var(--paper)', borderRadius: '4px 4px 0 0', borderTop: '1px solid var(--line)', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 -8px 32px rgba(21,16,10,0.18)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#c4b9a8' }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--line)' }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 12px' }}>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: '#1a1209' }}>Compartir por WhatsApp</div>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 17, fontWeight: 700, color: '#1a1209' }}>Compartir por WhatsApp</div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 20, color: '#9e8a6a', cursor: 'pointer', lineHeight: 1 }}>✕</button>
         </div>
         <div style={{ display: 'flex', gap: 12, padding: '0 20px 16px', alignItems: 'center' }}>
@@ -116,9 +116,9 @@ export function ShareModal({ product, onClose }) {
             : <div style={{ width: 56, height: 56, background: '#f0ede8', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>👕</div>
           }
           <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 14, color: '#1a1209', marginBottom: 2 }}>{product.name}</div>
+            <div style={{ fontFamily: 'var(--serif)', fontWeight: 700, fontSize: 14, color: '#1a1209', marginBottom: 2 }}>{product.name}</div>
             <div style={{ fontSize: 12, color: '#9e8a6a' }}>Talla {product.size}{product.color ? ` · ${product.color}` : ''}</div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 14, color: '#1a1209', marginTop: 2 }}>Bs. {product.price}</div>
+            <div style={{ fontFamily: 'var(--serif)', fontWeight: 700, fontSize: 14, color: '#1a1209', marginTop: 2 }}>Bs. {product.price}</div>
           </div>
         </div>
         <div style={{ height: 1, background: '#e8e0d4', margin: '0 20px' }} />

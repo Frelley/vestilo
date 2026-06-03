@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   getBundles, createBundle, updateBundle, deleteBundle,
   getBundleWithProducts, getBundleAudit
@@ -21,7 +21,7 @@ function ProfitBadge({ value }) {
     <span style={{
       fontWeight: 700,
       color: zero ? '#9e8a6a' : positive ? '#2e7d32' : '#c62828',
-      fontFamily: "'Playfair Display', serif",
+      fontFamily: 'var(--serif)',
     }}>
       {positive ? '+' : ''}Bs. {(value || 0).toFixed(2)}
     </span>
@@ -77,7 +77,7 @@ function BundleForm({ bundle, onSave, onCancel }) {
 
   return (
     <div style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#1a1209' }}>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#1a1209' }}>
         {editing ? 'Editar lote' : 'Nuevo lote'}
       </div>
 
@@ -116,7 +116,7 @@ function BundleForm({ bundle, onSave, onCancel }) {
 
       {form.cost_per_unit && form.total_quantity && (
         <div style={{ background: '#f0ede8', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#3d3020' }}>
-          Inversión total estimada: <strong style={{ fontFamily: "'Playfair Display', serif" }}>Bs. {(parseFloat(form.cost_per_unit) * parseInt(form.total_quantity, 10)).toFixed(2)}</strong>
+          Inversión total estimada: <strong style={{ fontFamily: 'var(--serif)' }}>Bs. {(parseFloat(form.cost_per_unit) * parseInt(form.total_quantity, 10)).toFixed(2)}</strong>
         </div>
       )}
 
@@ -164,12 +164,12 @@ function BundleDetail({ bundleId, onClose }) {
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 300, backdropFilter: 'blur(2px)' }} />
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 500,
-        background: '#faf8f5', zIndex: 301, overflowY: 'auto',
+        background: 'var(--paper)', zIndex: 301, overflowY: 'auto',
         boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e8e0d4', position: 'sticky', top: 0, background: '#faf8f5', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e8e0d4', position: 'sticky', top: 0, background: 'var(--paper)', zIndex: 1 }}>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 20, color: '#9e8a6a', cursor: 'pointer' }}>←</button>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#1a1209' }}>Detalle del lote</div>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 700, color: '#1a1209' }}>Detalle del lote</div>
           <div style={{ width: 28 }} />
         </div>
 
@@ -182,7 +182,7 @@ function BundleDetail({ bundleId, onClose }) {
             {/* Header */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: '#1a1209' }}>{bundle.name}</div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 700, color: '#1a1209' }}>{bundle.name}</div>
                 <span className="badge" style={{ background: bs.bg, color: bs.color }}>{bs.label}</span>
               </div>
               {bundle.source && <div style={{ fontSize: 13, color: '#9e8a6a' }}>Fuente: {bundle.source}</div>}
@@ -200,7 +200,7 @@ function BundleDetail({ bundleId, onClose }) {
               ].map(([label, val, color]) => (
                 <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '12px 14px' }}>
                   <div style={{ fontSize: 11, color: '#9e8a6a', marginBottom: 4 }}>{label}</div>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 16, color }}>{val}</div>
+                  <div style={{ fontFamily: 'var(--serif)', fontWeight: 700, fontSize: 16, color }}>{val}</div>
                 </div>
               ))}
             </div>
@@ -230,7 +230,7 @@ function BundleDetail({ bundleId, onClose }) {
                   ['Disponibles', bundle.units_remaining || 0, '#9e8a6a'],
                 ].map(([label, val, color]) => (
                   <div key={label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color }}>{val}</div>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 700, color }}>{val}</div>
                     <div style={{ fontSize: 11, color: '#9e8a6a' }}>{label}</div>
                   </div>
                 ))}
@@ -318,14 +318,14 @@ export default function BundleManager() {
   const [detailId, setDetailId]   = useState(null)
   const { toast, show } = useToast()
 
-  useEffect(() => { load() }, [])
-
   async function load() {
     setLoading(true)
     const { data } = await getBundles()
     if (data) setBundles(data)
     setLoading(false)
   }
+
+  useEffect(() => { load() }, [])
 
   async function handleCreate(payload) {
     const { data, error } = await createBundle(payload)
@@ -373,7 +373,7 @@ export default function BundleManager() {
           ].map(([label, val, color]) => (
             <div key={label} style={{ background: '#fff', border: '1px solid #e8e0d4', borderRadius: 8, padding: '10px 12px', borderTop: `3px solid ${color}` }}>
               <div style={{ fontSize: 10, color: '#9e8a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color }}>{val}</div>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 700, color }}>{val}</div>
             </div>
           ))}
         </div>
@@ -381,7 +381,7 @@ export default function BundleManager() {
 
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: '#1a1209' }}>
+        <div style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 700, color: '#1a1209' }}>
           Lotes de inventario
         </div>
         <button onClick={() => { setShowCreate(true); setEditingBundle(null) }} className="btn btn-primary" style={{ fontSize: 12 }}>
@@ -398,7 +398,7 @@ export default function BundleManager() {
       ) : bundles.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 48, color: '#9e8a6a' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: '#1a1209', marginBottom: 6 }}>Sin lotes registrados</div>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 16, color: '#1a1209', marginBottom: 6 }}>Sin lotes registrados</div>
           <div style={{ fontSize: 13 }}>Crea tu primer lote para empezar a trackear rentabilidad</div>
         </div>
       ) : (
@@ -423,7 +423,7 @@ export default function BundleManager() {
                 <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 15, color: '#1a1209' }}>{b.name}</div>
+                      <div style={{ fontFamily: 'var(--serif)', fontWeight: 700, fontSize: 15, color: '#1a1209' }}>{b.name}</div>
                       <span className="badge" style={{ background: bs.bg, color: bs.color }}>{bs.label}</span>
                     </div>
                     {b.source && <div style={{ fontSize: 12, color: '#9e8a6a', marginTop: 2 }}>{b.source}</div>}
@@ -457,7 +457,7 @@ export default function BundleManager() {
                   ].map(([label, val, color], i) => (
                     <div key={label} style={{ padding: '10px 12px', borderRight: i < 3 ? '1px solid #f0ede8' : 'none' }}>
                       <div style={{ fontSize: 10, color: '#9e8a6a', marginBottom: 3 }}>{label}</div>
-                      <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 13, color }}>{val}</div>
+                      <div style={{ fontFamily: 'var(--serif)', fontWeight: 700, fontSize: 13, color }}>{val}</div>
                     </div>
                   ))}
                 </div>

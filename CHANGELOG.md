@@ -2,6 +2,7 @@
 
 | Version | Changes |
 |---|---|
+| v7.8 | Atelier polish: Share/Poster/Bundle modals refreshed to the palette (Bodoni headings, paper sheets); fixed garbled Marketing tab label (🎬). |
 | v7.7 | Atelier redesign (admin pass): restyled Login, Upload, Sell modal, admin product cards, and the dashboard shell (stats, tabs, toolbar) to the Atelier system. Deep utility modals (Share, Poster, Bundles) inherit the new palette. |
 | v7.6 | Atelier visual redesign (storefront pass): new Bodoni Moda + Hanken Grotesk type system, warm paper palette, unified single light theme (Swipe deck no longer dark), custom SVG icon set replacing emoji, restyled catalogue grid, product detail, swipe deck, and lista de compra. Admin/Upload/Login restyle pending. |
 | v7.4 | Auto-started ecommerce background cleanup for new uploads and moved first-photo cleanup onto OpenAI Batch API with polling finalization. |
